@@ -111,7 +111,8 @@ tr:last-child td{border-bottom:none}
 .step.stop .sl{color:var(--ink2);font-weight:700}
 .conn{flex:1;height:2px;background:var(--gray-soft);min-width:12px;margin-bottom:18px;border-radius:2px}
 .conn.done{background:var(--green)}
-.app-card{background:var(--gray-soft);border-radius:var(--r-md);padding:14px 15px;margin-bottom:10px}
+.app-card{background:var(--gray-soft);border-radius:var(--r-md);padding:14px 15px;margin-bottom:10px;transition:filter .15s ease,box-shadow .15s ease,transform .15s ease}
+.app-card:hover{filter:brightness(.955);box-shadow:0 10px 24px rgba(0,0,0,.13) !important;transform:translateY(-1px)}
 .app-card .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:4px}
 .app-card .hd .co{font-weight:700;font-size:15px}
 .app-card .hd .ti{color:var(--ink2);font-size:14px}
@@ -221,7 +222,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 /* 桌面端：AI 面板变为右侧侧边栏，不遮挡主内容，可边看边聊 */
 @media (min-width:760px){
   #aiOverlay{justify-content:flex-end;align-items:stretch;background:rgba(0,0,0,.15);backdrop-filter:none}
-  #aiPanel{width:400px;max-width:400px;height:100vh;border-radius:16px 0 0 16px;animation:slideIn .28s cubic-bezier(.4,0,.2,1)}
+  #aiPanel{width:400px;max-width:400px;height:92vh;border-radius:16px 0 0 16px;animation:slideIn .28s cubic-bezier(.4,0,.2,1)}
   #aiOverlay.closing #aiPanel{animation:slideOut .22s ease forwards}
   @keyframes slideIn{from{transform:translateX(100%)}to{transform:none}}
   @keyframes slideOut{from{transform:none}to{transform:translateX(100%)}}
@@ -3205,7 +3206,7 @@ function aiStyleCycle(){
   const applyPos=()=>{
     try{
       const raw=lsGet(posKey());
-      if(!raw){p.style.position="";p.style.left="";p.style.top="";p.style.margin="";return;}
+      if(!raw){p.style.position="";p.style.left="";p.style.right="";p.style.top="";p.style.margin="";return;}
       const o=JSON.parse(raw||"null");
       if(!o||typeof o.x!=="number"||typeof o.y!=="number")return;
       const r=p.getBoundingClientRect();
@@ -3215,19 +3216,29 @@ function aiStyleCycle(){
       p.style.left=c.x+"px";p.style.top=c.y+"px";
     }catch(_){}
   };
-  let dragging=false,sx=0,sy=0,sw=0,sh=0;
+  let dragging=false,sx=0,sy=0,sw=0,sh=0,sl=0;
   handle.addEventListener("pointerdown",e=>{
     dragging=true;handle.classList.add("dragging");
     try{handle.setPointerCapture(e.pointerId);}catch(_){}
     const r=p.getBoundingClientRect();
-    sx=e.clientX;sy=e.clientY;sw=r.width;sh=r.height;
+    sx=e.clientX;sy=e.clientY;sw=r.width;sh=r.height;sl=r.left;
+    if(isDesktop()){
+      // 关键：拖动期间把面板改成「右边缘锚定」，宽度变化只会向左侧延展
+      p.style.position="fixed";
+      p.style.margin="0";
+      p.style.top=r.top+"px";
+      p.style.height=r.height+"px";
+      p.style.right=Math.max(0,window.innerWidth-r.right)+"px";
+      p.style.left="auto";
+    }
     e.preventDefault();
   });
   handle.addEventListener("pointermove",e=>{
     if(!dragging)return;
     if(isDesktop()){
-      const w=Math.max(300,Math.min(window.innerWidth-40,sw+(sx-e.clientX)));
-      p.style.width=w+"px";p.style.maxWidth="none";
+      const w=Math.max(300,Math.min(sw-(e.clientX-sx),window.innerWidth-20));
+      p.style.width=w+"px";
+      p.style.maxWidth="none";
     }else{
       const hh=Math.max(260,Math.min(window.innerHeight-24,sh+(sy-e.clientY)));
       p.style.height=hh+"px";
@@ -3240,6 +3251,7 @@ function aiStyleCycle(){
     if(isDesktop()){
       const w=parseInt(p.style.width||"0",10);
       if(w>0)lsSet("wb_qiuzhao_aiw",w);
+      apply();   // 退出临时 fixed 定位，回到右对齐布局（宽度/高度按记忆恢复）
     }else{
       const hh=parseInt(p.style.height||"0",10);
       if(hh>0)lsSet("wb_qiuzhao_aih",hh);
@@ -3260,7 +3272,7 @@ function aiStyleCycle(){
     });
     hb.addEventListener("pointermove",e=>{
       if(!hdrag)return;
-      const nh=Math.max(240,Math.min(window.innerHeight-20,hh0+(e.clientY-hy)));
+      const nh=Math.max(240,Math.min(window.innerHeight,hh0+(e.clientY-hy)));
       p.style.height=nh+"px";
       e.stopPropagation();
     });
