@@ -27,8 +27,9 @@ header.top h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
 header.top .sub{color:var(--ink2);font-size:13px;margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 header.top .sub .editSub{border:none;background:var(--card);color:var(--blue);border-radius:980px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;min-height:30px;box-shadow:var(--shadow)}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:6px 4px 12px}
-.btn{display:inline-flex;align-items:center;gap:6px;border:none;background:var(--card);color:var(--blue);border-radius:980px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;box-shadow:var(--shadow);transition:transform .12s,opacity .12s}
-.btn:active{transform:scale(.96);opacity:.85}
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;background:var(--card);color:var(--blue);border-radius:980px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;box-shadow:var(--shadow);transition:transform .18s cubic-bezier(.4,0,.2,1),opacity .18s,box-shadow .18s}
+.btn:hover{box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.btn:active{transform:scale(.94);opacity:.85}
 .btn svg{width:16px;height:16px}
 .btn.primary{background:var(--blue);color:#fff}
 .btn.danger{background:var(--red-soft);color:var(--red);box-shadow:none}
@@ -61,13 +62,16 @@ header.top .sub .editSub{border:none;background:var(--card);color:var(--blue);bo
 nav.tabs{position:sticky;top:0;z-index:30;padding:8px 0 10px;background:rgba(245,245,247,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 nav.tabs .seg{display:flex;gap:4px;background:#e8e8ed;border-radius:14px;padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 nav.tabs .seg::-webkit-scrollbar{display:none}
-nav.tabs button{flex:1 0 auto;border:none;background:transparent;border-radius:11px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink2);min-height:40px;white-space:nowrap;transition:.15s}
+nav.tabs button{flex:1 0 auto;border:none;background:transparent;border-radius:11px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink2);min-height:40px;white-space:nowrap;transition:background .25s cubic-bezier(.4,0,.2,1),color .25s,box-shadow .25s,transform .15s}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button:active{transform:scale(.96)}
 nav.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
 section.pane{display:none}
-section.pane.on{display:block;animation:fade .25s ease}
-@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+section.pane.on{display:block;animation:fade .3s cubic-bezier(.4,0,.2,1)}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 /* ===== 卡片 ===== */
-.card{background:var(--card);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card{background:var(--card);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow);transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08)}
 .card>h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:12px;letter-spacing:-.2px}
 .card>h3 svg{width:19px;height:19px;color:var(--blue);flex:none}
 .card>h3 .note{font-weight:400;font-size:12px;color:var(--ink3);margin-left:auto;text-align:right}
@@ -170,9 +174,14 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .empty .btn{margin-top:12px}
 /* ===== 弹层表单（手机底部上滑 / 桌面居中） ===== */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.36);z-index:96;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
-.overlay.on{display:flex}
-.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;animation:up .25s ease}
+.overlay.on{display:flex;animation:fadeIn .22s ease}
+.overlay.closing{animation:fadeOut .2s ease forwards}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;animation:up .3s cubic-bezier(.4,0,.2,1)}
+.overlay.closing .sheet{animation:down .2s ease forwards}
 @keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes down{from{transform:none;opacity:1}to{transform:translateY(40px);opacity:.4}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
 .sheet h3{font-size:18px;font-weight:700;margin-bottom:14px;display:flex;align-items:center}
 .sheet h3 .x{margin-left:auto;border:none;background:var(--gray-soft);width:32px;height:32px;border-radius:50%;font-size:16px;color:var(--ink2);cursor:pointer}
 .f-row{margin-bottom:12px}
@@ -202,19 +211,22 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 }
 /* ===== AI 助手 ===== */
 #aiOverlay{position:fixed;inset:0;background:rgba(0,0,0,.36);z-index:95;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
-#aiOverlay.on{display:flex}
-#aiPanel{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;height:86vh;display:flex;flex-direction:column;animation:up .25s ease}
+#aiOverlay.on{display:flex;animation:fadeIn .22s ease}
+#aiOverlay.closing{animation:fadeOut .2s ease forwards}
+#aiPanel{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;height:86vh;display:flex;flex-direction:column;animation:up .3s cubic-bezier(.4,0,.2,1)}
+#aiOverlay.closing #aiPanel{animation:down .2s ease forwards}
 @media (min-width:640px){#aiOverlay{align-items:center}#aiPanel{border-radius:22px;height:78vh}}
 .ai-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
 .ai-head h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
 .ai-head .cfg{font-size:12px;color:var(--ink3)}
 .ai-head .x{margin-left:auto;border:none;background:var(--gray-soft);width:32px;height:32px;border-radius:50%;font-size:16px;color:var(--ink2);cursor:pointer}
 .ai-body{flex:1;overflow-y:auto;padding:14px 16px}
-.ai-msg{max-width:86%;margin:0 0 12px;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.ai-msg{max-width:86%;margin:0 0 12px;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;animation:msgIn .25s cubic-bezier(.4,0,.2,1)}
+@keyframes msgIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .ai-msg.user{margin-left:auto;background:var(--blue);color:#fff;border-bottom-right-radius:6px}
 .ai-msg.bot{background:var(--gray-soft);color:var(--ink);border-bottom-left-radius:6px}
 .ai-msg.err{background:var(--red-soft);color:var(--red)}
-.ai-preview{margin:0 0 12px;border:1px solid var(--blue);border-radius:14px;padding:12px;background:var(--blue-soft)}
+.ai-preview{margin:0 0 12px;border:1px solid var(--blue);border-radius:14px;padding:12px;background:var(--blue-soft);animation:msgIn .3s cubic-bezier(.4,0,.2,1)}
 .ai-preview .pt{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px}
 .ai-preview .pv{font-size:13px;color:var(--ink);margin:4px 0;display:flex;gap:6px;align-items:flex-start}
 .ai-preview .pv input{margin-top:3px}
@@ -233,6 +245,14 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .ai-attach{flex:none;border:none;background:var(--gray-soft);border-radius:12px;width:44px;min-height:44px;font-size:17px;cursor:pointer}
 .ai-dochip{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--blue-soft);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:6px}
 .ai-dochip .del{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:14px}
+/* 预览分组折叠 */
+.pv-group{border:1px solid var(--line);border-radius:10px;margin:6px 0;overflow:hidden}
+.pv-group-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--gray-soft);cursor:pointer;user-select:none}
+.pv-group-title{font-size:13px;font-weight:600;color:var(--ink)}
+.pv-group-caret{font-size:12px;color:var(--ink3);transition:transform .2s}
+.pv-group.collapsed .pv-group-body{display:none}
+.pv-group.collapsed .pv-group-caret{transform:rotate(-90deg)}
+.pv-group-body{padding:4px 12px 8px}
 /* 右侧常驻悬浮 AI 按钮 */
 #aiFab{position:fixed;right:18px;bottom:84px;z-index:94;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#0a84ff,#5e5ce6);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(10,132,255,.35);transition:transform .18s}
 #aiFab:hover{transform:scale(1.08)}
@@ -1356,7 +1376,10 @@ function closeSheet(force){
     }
   }
   _sheetSnap=null;
-  $("#overlay").classList.remove("on");
+  const ov=$("#overlay");
+  // 保留 .on 触发淡出动画，动画结束后再移除，实现平滑关闭
+  ov.classList.add("closing");
+  setTimeout(()=>{ov.classList.remove("on");ov.classList.remove("closing");},200);
 }
 $("#overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeSheet()});
 function stageOptions(cur){
@@ -1962,6 +1985,15 @@ const LLM_MODELS=[
 ];
 let LLM_CFG=null;
 try{const c=JSON.parse(localStorage.getItem(LLM_KEY)||"null");if(c&&c.base&&c.key)LLM_CFG=c;}catch(e){LLM_CFG=null}
+// 响应风格档位（映射到 temperature）
+const AI_STYLES=[
+  {id:"strict", name:"严谨", desc:"填表准确、不瞎编", temp:0.1},
+  {id:"balanced", name:"平衡", desc:"准确与灵活兼顾（默认）", temp:0.5},
+  {id:"creative", name:"发散", desc:"更有创意，适合头脑风暴", temp:1.0},
+  {id:"max", name:"最大", desc:"非常发散，适合写文案", temp:1.4}
+];
+let aiStyle=(()=>{try{return localStorage.getItem("wb_qiuzhao_aistyle")||"balanced"}catch(e){return "balanced"}})();
+function aiTemp(){const s=AI_STYLES.find(x=>x.id===aiStyle);return s?s.temp:0.5;}
 let aiChat=[];          // 会话消息 [{role,content}]
 let aiPending=null;     // 待确认的工具调用 [{name,args,label}]
 let aiAbort=null;       // AbortController，用于中断
@@ -2047,18 +2079,18 @@ function aiRunTool(name,args){
       // 智能纠错：检测重复投递
       const dup=aiFindApp(args.co,args.ti);
       const dupWarn=dup?("（⚠️ 已存在同公司岗位「"+dup.co+"·"+dup.ti+"」，可能重复）"):"";
-      return {label:"新增投递「"+args.co+" · "+(args.ti||"")+"」"+dupWarn, apply:()=>{S.apps.push({id:uid(),co:args.co||"未命名公司",ti:args.ti||"未命名岗位",nat:args.nat||"校招",date:args.date||TODAY,ch:args.ch||"",url:args.url||"",stage:args.stage||"已投递",terminal:null,note:args.note||"AI 录入",upd:TODAY,history:[{d:TODAY,stage:args.stage||"已投递",note:"AI 录入"}]});}};
+      return {type:"投递", label:"新增投递「"+args.co+" · "+(args.ti||"")+"」"+dupWarn, apply:()=>{S.apps.push({id:uid(),co:args.co||"未命名公司",ti:args.ti||"未命名岗位",nat:args.nat||"校招",date:args.date||TODAY,ch:args.ch||"",url:args.url||"",stage:args.stage||"已投递",terminal:null,note:args.note||"AI 录入",upd:TODAY,history:[{d:TODAY,stage:args.stage||"已投递",note:"AI 录入"}]});}};
     }
     case "add_interview": {
-      return {label:"添加面试记录「"+args.co+" · "+args.round+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.interviews=a.interviews||[];a.interviews.push({round:args.round||"面试",date:args.date||TODAY,form:args.form||"",questions:args.questions||"",review:args.review||""});}};
+      return {type:"面试", label:"添加面试记录「"+args.co+" · "+args.round+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.interviews=a.interviews||[];a.interviews.push({round:args.round||"面试",date:args.date||TODAY,form:args.form||"",questions:args.questions||"",review:args.review||""});}};
     }
     case "set_offer": {
       const off={structure:args.structure||"",monthly:args.monthly||"",months:args.months||"",social:args.social||"",probation:args.probation||"",location:args.location||"",worktime:args.worktime||"",holiday:args.holiday||"",benefits:args.benefits||""};
-      return {label:"设置 Offer 待遇「"+args.co+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.offer=off;a.stage="Offer";a.terminal=null;a.upd=TODAY;a.history=a.history||[];a.history.push({d:TODAY,stage:"Offer",note:"AI 录入 Offer"});}};
+      return {type:"Offer", label:"设置 Offer 待遇「"+args.co+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.offer=off;a.stage="Offer";a.terminal=null;a.upd=TODAY;a.history=a.history||[];a.history.push({d:TODAY,stage:"Offer",note:"AI 录入 Offer"});}};
     }
-    case "add_target": return {label:"新增目标岗位「"+args.co+"」", apply:()=>{S.mt.push({id:uid(),p:args.p||"P2",co:args.co,dir:args.dir||"",major:args.major||"不限专业",city:args.city||"",time:args.time||"",dl:args.dl||"",act:args.act||""});}};
-    case "add_todo": return {label:"新增待办「"+args.t+"」", apply:()=>{S.todos.push({id:uid(),p:args.p||"P2",t:args.t,d:args.d||"",w:args.w||"",done:false});}};
-    case "set_profile": return {label:"更新个人档案", apply:()=>{const p=S.profile||{};Object.keys(args).forEach(k=>{if(args[k])p[k]=args[k]});S.profile=p;}};
+    case "add_target": return {type:"目标岗位", label:"新增目标岗位「"+args.co+"」", apply:()=>{S.mt.push({id:uid(),p:args.p||"P2",co:args.co,dir:args.dir||"",major:args.major||"不限专业",city:args.city||"",time:args.time||"",dl:args.dl||"",act:args.act||""});}};
+    case "add_todo": return {type:"待办", label:"新增待办「"+args.t+"」", apply:()=>{S.todos.push({id:uid(),p:args.p||"P2",t:args.t,d:args.d||"",w:args.w||"",done:false});}};
+    case "set_profile": return {type:"个人档案", label:"更新个人档案", apply:()=>{const p=S.profile||{};Object.keys(args).forEach(k=>{if(args[k])p[k]=args[k]});S.profile=p;}};
     case "list_data": {
       const appS=S.apps.map(a=>{
         const iv=a.interviews&&a.interviews.length?a.interviews.length+" 轮":"";
@@ -2106,7 +2138,11 @@ function aiOpen(){
   aiRenderDoc();
   if(!aiChat.length)aiBotMsg("你好，我是你的秋招助手。直接把面试经历、Offer 待遇或求职安排发给我，我会帮你整理进对应的板块。写入前会先让你确认。");
 }
-function aiClose(){$("#aiOverlay").classList.remove("on")}
+function aiClose(){
+  const ov=$("#aiOverlay");
+  ov.classList.add("closing");
+  setTimeout(()=>{ov.classList.remove("on");ov.classList.remove("closing");},200);
+}
 function aiRenderHistory(){
   const b=$("#aiBody");b.innerHTML="";
   aiChat.forEach(m=>{
@@ -2126,8 +2162,25 @@ function aiTyping(){const b=$("#aiBody");const id="ty"+Date.now();b.insertAdjace
 function aiRenderPending(){
   const b=$("#aiBody");
   if(!aiPending||!aiPending.length)return;
-  const items=aiPending.map((p,i)=>`<label class="pv"><input type="checkbox" data-ai-p="${i}" checked> ${esc(p.label)}</label>`).join("");
-  b.insertAdjacentHTML("beforeend",`<div class="ai-preview"><div class="pt">AI 解析出以下内容，勾选后点「确认写入」：</div>${items}<div class="btnrow" style="margin-top:10px"><button class="btn" id="aiCancelW">全部放弃</button><button class="btn primary" id="aiConfirmW">确认写入</button></div></div>`);
+  // 按 type 字段分组（aiRunTool 已返回），生成精简摘要列表（可展开）
+  const groups=[];
+  aiPending.forEach((p,i)=>{
+    const type=p.type||"其他";
+    const g=groups.find(x=>x.type===type);
+    if(g)g.items.push({i,label:p.label});
+    else groups.push({type,items:[{i,label:p.label}]});
+  });
+  const html=groups.map(g=>`
+    <div class="pv-group" data-ai-group="${g.type}">
+      <div class="pv-group-head" data-ai-toggle="${g.type}">
+        <span class="pv-group-title">${esc(g.type)}（${g.items.length} 条）</span>
+        <span class="pv-group-caret">▾</span>
+      </div>
+      <div class="pv-group-body">
+        ${g.items.map(it=>`<label class="pv"><input type="checkbox" data-ai-p="${it.i}" checked> ${esc(it.label)}</label>`).join("")}
+      </div>
+    </div>`).join("");
+  b.insertAdjacentHTML("beforeend",`<div class="ai-preview"><div class="pt">AI 解析出 ${aiPending.length} 条内容，按类型分组如下，勾选后点「确认写入」：</div>${html}<div class="btnrow" style="margin-top:10px"><button class="btn" id="aiCancelW">全部放弃</button><button class="btn primary" id="aiConfirmW">确认写入</button></div></div>`);
   b.scrollTop=b.scrollHeight;
 }
 function aiConfirmWrite(){
@@ -2148,6 +2201,7 @@ function aiSetupForm(){
   <div class="f-row"><label>接口地址（Base URL）</label><input id="ai_base" value="${esc(cfg.base||"")}" placeholder="https://…"></div>
   <div class="f-row"><label>API Key</label><input id="ai_key" type="password" value="${esc(cfg.key||"")}" placeholder="sk-…"></div>
   <div class="f-row"><label>模型名</label><input id="ai_model" value="${esc(cfg.model||"")}" placeholder="如 deepseek-chat"></div>
+  <div class="f-row"><label>响应风格（影响创造力与发散度）</label><select id="ai_style">${AI_STYLES.map(st=>`<option value="${st.id}" ${st.id===aiStyle?"selected":""}>${st.name} — ${st.desc}</option>`).join("")}</select></div>
   <div class="small" id="ai_hint" style="margin-bottom:6px"></div>
   <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_ai">保存</button></div>`);
   const sync=()=>{const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);if(m&&!$("#ai_base").value){$("#ai_base").value=m.base}$("#ai_model").placeholder=m&&m.model?("如 "+m.model):"模型名";$("#ai_hint").textContent=m?(m.hint||(m.cors?"":"该厂商支持浏览器直连")):"";if(m&&m.model&&!$("#ai_model").value)$("#ai_model").value=m.model};
@@ -2318,9 +2372,9 @@ async function aiCall(){
   try{
     const url=LLM_CFG.base.replace(/\/$/,"")+"/chat/completions";
     const sys=aiSystemPrompt();
-    // 第一段：非流式，稳妥拿 tool_calls
+    // 第一段：非流式，稳妥拿 tool_calls（填表用低 temperature 保证准确）
     const r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
-      body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false})});
+      body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false,temperature:Math.min(aiTemp(),0.3)})});
     if(!r.ok){const j=await r.json().catch(()=>({}));const msg=(j.error&&j.error.message)||("HTTP "+r.status);throw new Error(msg);}
     const j=await r.json();
     const msg=j.choices&&j.choices[0]&&j.choices[0].message;
@@ -2345,7 +2399,7 @@ async function aiCall(){
       aiRenderPending();
       // 第二段：流式生成确认文案
       const r2=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
-        body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true})});
+        body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true,temperature:aiTemp()})});
       if(r2.ok&&r2.body){
         const acc=await aiReadStream(r2,()=>{});
         aiChat.push({role:"assistant",content:acc||"（已解析，请确认写入）"});
@@ -2470,6 +2524,8 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="f_save_ai"){
     const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);
     LLM_CFG={id:id,name:m?m.name:"",base:$("#ai_base").value.trim(),key:$("#ai_key").value.trim(),model:$("#ai_model").value.trim()};
+    aiStyle=$("#ai_style").value||"balanced";
+    try{localStorage.setItem("wb_qiuzhao_aistyle",aiStyle)}catch(e){}
     aiSaveCfg();closeSheet();
     $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
     toast(aiReady()?"AI 助手已配置":"配置不完整");return;
@@ -2477,12 +2533,14 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="aiConfirmW"){aiConfirmWrite();return;}
   if(e.target.id==="aiCancelW"){aiPending=null;const b=$("#aiBody");const p=b.querySelector(".ai-preview");if(p)p.remove();aiBotMsg("已放弃本次解析内容。");return;}
 });
-/* 面板 AI 入口 + 文档清除按钮（独立委托） */
+/* 面板 AI 入口 + 文档清除按钮 + 预览分组折叠（独立委托） */
 document.addEventListener("click",e=>{
   const ctxBtn=e.target.closest("[data-ai-ctx]");
   if(ctxBtn){aiOpenCtx(ctxBtn.dataset.aiCtx);return;}
   const del=e.target.closest("[data-ai-doc-clear]");
   if(del){aiClearDoc();return;}
+  const tog=e.target.closest("[data-ai-toggle]");
+  if(tog){const g=tog.closest(".pv-group");if(g)g.classList.toggle("collapsed");return;}
 });
 
 /* ================= 导航 ================= */
