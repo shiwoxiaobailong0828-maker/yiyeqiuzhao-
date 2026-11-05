@@ -245,6 +245,8 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .ai-resize-b::before{content:"";position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:46px;height:4px;border-radius:3px;background:var(--ink3);opacity:.45;transition:opacity .15s,background .15s}
 .ai-resize-b:hover::before,.ai-resize-b.dragging::before{opacity:1;background:var(--blue)}
 .ai-resize-b:hover,.ai-resize-b.dragging{background:rgba(0,122,255,.06)}
+/* 桌面端显示底部手柄（必须写在上面的 display:none 之后才生效） */
+@media (min-width:760px){.ai-resize-b{display:block}}
 .ai-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line);cursor:move;touch-action:none}
 .ai-head h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
 .ai-head .cfg{font-size:12px;color:var(--ink3)}
@@ -2115,12 +2117,24 @@ function aiWebOn(){return !!(LLM_CFG&&LLM_CFG.web!==false)}
 /* 会话历史持久化（刷新后保留多轮上下文） */
 function aiSaveChat(){
   try{
-    const arr=aiChat;
-    // 保留最近 60 条，并对齐到 user 轮次起点，避免截断出孤儿 tool 消息
-    let start=Math.max(0,arr.length-60);
-    while(start<arr.length&&arr[start].role!=="user")start++;
-    const keep=arr.slice(start);
-    localStorage.setItem("wb_qiuzhao_aichat",JSON.stringify(keep));
+    // 去掉体积大且无用的字段，避免超配额导致写不进去
+    const slim=aiChat.map(m=>{
+      if(!m||typeof m!=="object")return m;
+      const c=Object.assign({},m);
+      delete c.reasoning_content;
+      return c;
+    });
+    // 依次尝试 60/30/15/6/2 条，总有一次能写进去
+    const caps=[60,30,15,6,2];
+    for(let ci=0;ci<caps.length;ci++){
+      let start=Math.max(0,slim.length-caps[ci]);
+      while(start<slim.length&&slim[start].role!=="user")start++;
+      try{
+        localStorage.setItem("wb_qiuzhao_aichat",JSON.stringify(slim.slice(start)));
+        return;
+      }catch(e){}
+    }
+    try{localStorage.removeItem("wb_qiuzhao_aichat");}catch(e){}
   }catch(e){}
 }
 function aiLoadChat(){try{const c=JSON.parse(localStorage.getItem("wb_qiuzhao_aichat")||"[]");if(Array.isArray(c))aiChat=c.filter(m=>m&&m.role&&(m.content||m.tool_calls));}catch(e){aiChat=[]}}
@@ -2262,6 +2276,7 @@ function aiPlainText(t){
   x=x.replace(/^[ \t]*\|?(?:[ \t]*:?-{2,}:?[ \t]*\|)+[ \t]*$/gm,"");
   x=x.replace(/^[ \t]*\|(.+)\|[ \t]*$/gm,(m,inner)=>inner.split("|").map(c=>c.trim()).filter(Boolean).join(" · "));
   x=x.replace(/^[ \t]*>[ \t]?/gm,"");
+  x=x.replace(/#{2,6}[ \t]+/g,"");
   x=x.replace(/`([^`\n]+)`/g,"$1");
   x=x.replace(/\*([^*\n]+)\*/g,"$1");
   x=x.replace(/\n{3,}/g,"\n\n");
