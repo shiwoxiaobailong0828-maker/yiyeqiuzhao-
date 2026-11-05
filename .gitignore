@@ -15,7 +15,7 @@ node_modules/
 # 发布产物：由 一页秋招.html 拷贝生成，不进仓库
 deploy-qiuzhao/index.html
 
-# 与 一页秋招.html 完全重复的旧模板，已废弃（archive/ 已整体忽略）
+# 已废弃的旧模板名：防止误生成/误入库存（产物只保留 一页秋招.html）
 秋招工作台_通用模板.html
 
 # ===== 系统文件 =====
