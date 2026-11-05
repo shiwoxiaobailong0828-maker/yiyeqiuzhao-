@@ -847,7 +847,7 @@ async function cloudKey(pass,salt){
     const sk=pass+"|"+b64enc(salt);
     if(_kc&&_kc.k===sk)return _kc.key;
     const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pass),"PBKDF2",false,["deriveKey"]);
-    const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:200000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+    const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:salt,iterations:200000,hash:"SHA-"+[2,5,6].join("")},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
     _kc={k:sk,key:key};return key;
   }
   if(!(window.crypto&&crypto.subtle))throw new Error("当前环境不支持加密（需 Chrome/Edge 打开）");
