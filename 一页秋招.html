@@ -316,6 +316,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .ai-refs{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
 .ai-ref{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--blue);background:var(--blue-soft);border-radius:980px;padding:3px 9px;text-decoration:none;line-height:1.5}
 .ai-ref:hover{background:#d6e8ff}
+.ai-ref.none{background:var(--gray-soft);color:var(--ink3);cursor:default}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.95)}
 </style>
@@ -2214,20 +2215,40 @@ function aiAppendRefs(box,refs){
   const html=refs.slice(0,4).map((r,i)=>`<a class="ai-ref" href="${esc(r.u)}" target="_blank" rel="noopener noreferrer" title="${esc(r.t||r.u)}">${i+1} ${esc(aiRefShort(r))}</a>`).join("");
   box.insertAdjacentHTML("beforeend",`<div class="ai-refs">${html}</div>`);
 }
+function aiRefsFromText(txt){
+  const out=[],seen={};
+  const re=/https?:\/\/[^\s)\]）】，。；、"'"<>]+/g;
+  let m;
+  while((m=re.exec(txt||""))){
+    const u=(m[0]||"").replace(/[.,;，。]+$/,"");
+    if(u&&!seen[u]){seen[u]=1;out.push({u:u,t:""})}
+  }
+  return out;
+}
 function aiExtractRefs(obj){
   const out=[],seen={};
-  const add=(u,t)=>{if(typeof u!=="string"||!/^https?:\/\//.test(u)||seen[u])return;seen[u]=1;out.push({u:u,t:t||""})};
-  if(!obj)return out;
-  const si=obj.search_info;
-  if(si){
-    const arr=Array.isArray(si)?si:(si.search_results||si.results||[]);
-    (arr||[]).forEach(x=>add(x&&(x.url||x.link),x&&(x.title||x.site_name||x.name)));
-  }
-  (obj.references||[]).forEach(x=>add(x&&(x.url||x.link),x&&(x.title||x.name)));
-  (obj.annotations||[]).forEach(x=>{
-    const c=(x&&x.url_citation)||{};
-    add((x&&x.url)||c.url,(x&&x.title)||c.title);
-  });
+  const add=(u,t)=>{
+    if(typeof u!=="string"||!/^https?:\/\//.test(u)||seen[u])return;
+    seen[u]=1;out.push({u:u,t:t||""});
+  };
+  const visit=(o)=>{
+    if(!o||typeof o!=="object")return;
+    const si=o.search_info;
+    if(si){
+      const arr=Array.isArray(si)?si:(si.search_results||si.results||[]);
+      (arr||[]).forEach(x=>{if(x)add(x.url||x.link,x.title||x.site_name||x.name)});
+    }
+    if(Array.isArray(o.references))o.references.forEach(x=>{if(x)add(x.url||x.link,x.title||x.name)});
+    if(Array.isArray(o.annotations))o.annotations.forEach(x=>{
+      if(!x)return;
+      const c=x.url_citation||{};
+      add(x.url||c.url,x.title||c.title);
+    });
+  };
+  visit(obj);
+  // 兼容来源挂在 choices[i] 或 choices[i].message 上的情况
+  const ch=obj&&obj.choices;
+  if(Array.isArray(ch))ch.forEach(c=>{if(c){visit(c);visit(c.message);}});
   return out;
 }
 let _streamRefs=[];
@@ -2248,10 +2269,14 @@ function aiUserMsg(t,save){
   if(save!==false){aiChat.push({role:"user",content:t});aiSaveChat();}
 }
 function aiBotMsg(t,save,refs){
-  const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(t)}</div>`);
-  if(refs&&refs.length)aiAppendRefs(b,refs);
+  const b=$("#aiBody");
+  const list=(refs&&refs.length?refs.slice():[]);
+  aiRefsFromText(t).forEach(r=>{if(!list.some(x=>x.u===r.u))list.push(r)});
+  b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(t)}</div>`);
+  if(list.length)aiAppendRefs(b,list);
+  else if(/\[\d+\]/.test(t||""))b.insertAdjacentHTML("beforeend",`<div class="ai-refs"><span class="ai-ref none">未获取到来源链接</span></div>`);
   b.scrollTop=b.scrollHeight;
-  if(save!==false){const m={role:"assistant",content:t};if(refs&&refs.length)m.refs=refs;aiChat.push(m);aiSaveChat();}
+  if(save!==false){const m={role:"assistant",content:t};if(list.length)m.refs=list.slice(0,4);aiChat.push(m);aiSaveChat();}
 }
 function aiErrMsg(t){const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg err">${esc(t)}</div>`);b.scrollTop=b.scrollHeight}
 /* 流式输出：追加到同一个 bot 气泡 */
@@ -2823,7 +2848,17 @@ function aiRenderDoc(){
 
 /* ===== 模型 / 响应风格 快速切换 ===== */
 const AI_LIST_KEY="wb_qiuzhao_llm_list";
-function aiLoadList(){try{const a=JSON.parse(localStorage.getItem(AI_LIST_KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+function aiLoadList(){
+  let a=[];
+  try{const raw=localStorage.getItem(AI_LIST_KEY);a=raw?JSON.parse(raw):[]}catch(e){a=[]}
+  if(!Array.isArray(a))a=[];
+  // 兜底：列表为空但已有配置（老版本配置/换域名）时自动补录，避免出现"选了模型却显示没有模型"
+  if(!a.length&&LLM_CFG&&LLM_CFG.model&&LLM_CFG.base){
+    a=[{id:LLM_CFG.id,name:LLM_CFG.name,base:LLM_CFG.base,key:LLM_CFG.key,model:LLM_CFG.model,web:!!LLM_CFG.web}];
+    try{localStorage.setItem(AI_LIST_KEY,JSON.stringify(a))}catch(e){}
+  }
+  return a;
+}
 function aiSaveList(a){try{localStorage.setItem(AI_LIST_KEY,JSON.stringify(a.slice(0,20)))}catch(e){}}
 function aiCfgKey(c){return [c&&c.id,c&&c.base,c&&c.model].join("|")}
 function aiRememberCfg(cfg){
@@ -2836,9 +2871,10 @@ function aiRememberCfg(cfg){
 }
 function aiStyleName(){const s=AI_STYLES.find(x=>x.id===aiStyle);return s?s.name:"平衡"}
 function aiRefreshTools(){
+  if(LLM_CFG&&LLM_CFG.model&&LLM_CFG.base)aiRememberCfg(LLM_CFG); // 保证当前配置一定在可切换列表里
   const mb=$("#aiModelBtn"), sb=$("#aiStyleBtn");
   if(mb){
-    if(LLM_CFG&&LLM_CFG.model){mb.textContent=LLM_CFG.model;mb.classList.remove("muted");}
+    if(LLM_CFG&&LLM_CFG.model){mb.textContent=LLM_CFG.model+(LLM_CFG.web?" · 联网":"");mb.classList.remove("muted");}
     else{mb.textContent="未配置模型";mb.classList.add("muted");}
     mb.title="当前模型："+(LLM_CFG&&LLM_CFG.model?LLM_CFG.model:"未配置")+"（点击切换）";
   }
