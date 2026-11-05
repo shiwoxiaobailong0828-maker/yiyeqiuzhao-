@@ -1,0 +1,2349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0a84ff">
+<title>秋招工作台 · 一页秋招</title>
+<style>
+:root{
+  --bg:#f5f5f7; --card:#ffffff; --ink:#1d1d1f; --ink2:#6e6e73; --ink3:#aeaeb2;
+  --line:#e8e8ed; --blue:#007aff; --blue-soft:#e5f0ff;
+  --green:#34c759; --green-soft:#e6f9ec; --red:#ff3b30; --red-soft:#ffeceb;
+  --orange:#ff9500; --orange-soft:#fff3e0; --purple:#af52de; --purple-soft:#f7ecfd;
+  --teal:#5ac8fa; --gray:#8e8e93; --gray-soft:#f2f2f7;
+  --r-lg:20px; --r-md:14px; --r-sm:10px;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 8px 24px rgba(0,0,0,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"PingFang SC","MiSans","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;letter-spacing:.1px}
+.wrap{max-width:1080px;margin:0 auto;padding:12px 16px 80px}
+/* ===== 顶栏 ===== */
+header.top{padding:22px 4px 14px}
+header.top h1{font-size:30px;font-weight:700;letter-spacing:-.5px}
+header.top .sub{color:var(--ink2);font-size:13px;margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+header.top .sub .editSub{border:none;background:var(--card);color:var(--blue);border-radius:980px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;min-height:30px;box-shadow:var(--shadow)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:6px 4px 12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;background:var(--card);color:var(--blue);border-radius:980px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;min-height:44px;box-shadow:var(--shadow);transition:transform .12s,opacity .12s}
+.btn:active{transform:scale(.96);opacity:.85}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.danger{background:var(--red-soft);color:var(--red);box-shadow:none}
+.btn.cloud{background:var(--purple-soft);color:var(--purple)}
+.btn.cloud.on{background:var(--green-soft);color:var(--green)}
+.btn.cloud.err{background:var(--red-soft);color:var(--red)}
+.btn.small{padding:7px 13px;min-height:36px;font-size:13px}
+.hidden{display:none!important}
+.more-row{display:flex;align-items:center;gap:10px;padding:13px 4px;border-bottom:1px solid var(--gray-soft);cursor:pointer;font-size:15px;font-weight:500}
+.more-row:last-child{border-bottom:none}
+.more-row .ic{width:20px;height:20px;color:var(--blue);flex:none}
+.more-row .d{font-size:12px;color:var(--ink3);font-weight:400;margin-left:auto}
+/* ===== 今天要处理 ===== */
+.today{background:linear-gradient(135deg,#0a84ff,#5e5ce6);border-radius:var(--r-lg);padding:18px;color:#fff;margin-bottom:16px;box-shadow:0 8px 24px rgba(10,132,255,.25)}
+.today h2{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.today h2 svg{width:18px;height:18px}
+.today .todo-item{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;border-radius:var(--r-md);background:rgba(255,255,255,.14);backdrop-filter:blur(8px);margin-top:8px}
+.today .tag{flex:none;font-size:11px;font-weight:700;padding:3px 9px;border-radius:980px;background:rgba(255,255,255,.92);color:#0a84ff;margin-top:1px}
+.today .tag.hot{color:#ff453a}
+.today .txt{flex:1;font-size:14px;font-weight:500}
+.today .txt small{display:block;opacity:.82;font-size:12px;margin-top:2px;font-weight:400}
+/* ===== 统计卡 ===== */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border-radius:var(--r-lg);padding:14px 15px;box-shadow:var(--shadow)}
+.stat .n{font-size:28px;font-weight:700;line-height:1.1;letter-spacing:-.5px}
+.stat .l{color:var(--ink2);font-size:12px;margin-top:3px}
+.stat.blue .n{color:var(--blue)}.stat.green .n{color:var(--green)}.stat.red .n{color:var(--red)}
+.stat.amber .n{color:var(--orange)}.stat.purple .n{color:var(--purple)}.stat.gray .n{color:var(--gray)}
+/* ===== 分段导航（iOS segmented） ===== */
+nav.tabs{position:sticky;top:0;z-index:30;padding:8px 0 10px;background:rgba(245,245,247,.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+nav.tabs .seg{display:flex;gap:4px;background:#e8e8ed;border-radius:14px;padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+nav.tabs .seg::-webkit-scrollbar{display:none}
+nav.tabs button{flex:1 0 auto;border:none;background:transparent;border-radius:11px;padding:9px 14px;font-size:14px;font-weight:600;cursor:pointer;color:var(--ink2);min-height:40px;white-space:nowrap;transition:.15s}
+nav.tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+section.pane{display:none}
+section.pane.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+/* ===== 卡片 ===== */
+.card{background:var(--card);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card>h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:12px;letter-spacing:-.2px}
+.card>h3 svg{width:19px;height:19px;color:var(--blue);flex:none}
+.card>h3 .note{font-weight:400;font-size:12px;color:var(--ink3);margin-left:auto;text-align:right}
+.card>h4{font-size:14px;font-weight:700;margin:14px 0 8px;color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* ===== 表格 ===== */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--ink3);font-weight:600;font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid var(--gray-soft);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.tbl-scroll{overflow-x:auto}
+/* ===== 徽章（iOS pastel） ===== */
+.badge{display:inline-block;font-size:12px;padding:3px 10px;border-radius:980px;white-space:nowrap;font-weight:600}
+.b-doing{background:var(--blue-soft);color:var(--blue)}
+.b-reject{background:var(--red-soft);color:var(--red)}
+.b-quit{background:var(--gray-soft);color:var(--ink2)}
+.b-offer{background:var(--green-soft);color:#248a3d}
+.b-warn{background:var(--orange-soft);color:#c93400}
+.b-purple{background:var(--purple-soft);color:var(--purple)}
+/* ===== 阶段流程 ===== */
+.pipeline{display:flex;align-items:center;overflow-x:auto;padding:8px 0 4px;scrollbar-width:none}
+.pipeline::-webkit-scrollbar{display:none}
+.step{display:flex;flex-direction:column;align-items:center;min-width:66px;flex:none}
+.step .dot{width:26px;height:26px;border-radius:50%;background:var(--gray-soft);display:flex;align-items:center;justify-content:center;color:#fff;transition:.2s}
+.step .dot svg{width:13px;height:13px}
+.step .sl{font-size:11px;margin-top:5px;color:var(--ink3);white-space:nowrap;font-weight:500}
+.step.done .dot{background:var(--green)}
+.step.done .sl{color:var(--green);font-weight:700}
+.step.cur .dot{background:var(--blue);box-shadow:0 0 0 5px var(--blue-soft)}
+.step.cur .sl{color:var(--blue);font-weight:700}
+.sdate{display:block;margin-top:4px}
+.sdate input{width:92px;font-size:11px;padding:2px 4px;border:1px solid #d2d2d7;border-radius:7px;background:#fff;color:#1d1d1f;box-sizing:border-box;font-family:inherit}
+.step.fail .dot{background:var(--red)}
+.step.fail .sl{color:var(--red);font-weight:700}
+.step.stop .dot{background:var(--gray)}
+.step.stop .sl{color:var(--ink2);font-weight:700}
+.conn{flex:1;height:2px;background:var(--gray-soft);min-width:12px;margin-bottom:18px;border-radius:2px}
+.conn.done{background:var(--green)}
+.app-card{background:var(--gray-soft);border-radius:var(--r-md);padding:14px 15px;margin-bottom:10px}
+.app-card .hd{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:4px}
+.app-card .hd .co{font-weight:700;font-size:15px}
+.app-card .hd .ti{color:var(--ink2);font-size:14px}
+.app-card .meta{font-size:12px;color:var(--ink3);display:flex;flex-wrap:wrap;gap:3px 14px;margin-bottom:8px}
+.app-card .actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+select.stageSel{border:none;background:#fff;border-radius:980px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--blue);box-shadow:var(--shadow);cursor:pointer;min-height:36px;max-width:100%}
+.iconbtn{border:none;background:#fff;border-radius:980px;padding:8px 13px;font-size:13px;font-weight:600;color:var(--ink2);box-shadow:var(--shadow);cursor:pointer;min-height:36px;display:inline-flex;align-items:center;gap:5px}
+.iconbtn:active{transform:scale(.95)}
+.iconbtn.red{color:var(--red)}
+.iconbtn svg{width:14px;height:14px}
+/* ===== 进度条 / 分数 ===== */
+.bar{height:7px;border-radius:6px;background:var(--gray-soft);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:6px;background:var(--blue)}
+.bar.g>i{background:var(--green)}.bar.a>i{background:var(--orange)}.bar.r>i{background:var(--red)}
+.score-cell{display:flex;align-items:center;gap:8px;min-width:110px}
+.score-cell .bar{flex:1}
+.score-cell b{font-size:13px;width:26px;text-align:right}
+/* ===== 时间线 ===== */
+.tl{position:relative;padding-left:20px}
+.tl:before{content:"";position:absolute;left:6px;top:4px;bottom:4px;width:2px;background:var(--line);border-radius:2px}
+.tl-item{position:relative;padding:6px 0 12px}
+.tl-item:before{content:"";position:absolute;left:-18px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--blue);border:2px solid #fff;box-shadow:0 0 0 3px var(--blue-soft)}
+.tl-item.red:before{background:var(--red);box-shadow:0 0 0 3px var(--red-soft)}
+.tl-item.gray:before{background:var(--gray);box-shadow:0 0 0 3px var(--gray-soft)}
+.tl-item .d{font-size:12px;color:var(--ink3);font-weight:600}
+.tl-item .t{font-size:14px}
+.tl-item .t small{color:var(--ink2)}
+/* ===== 列表/键值 ===== */
+.kv{display:grid;grid-template-columns:98px 1fr;gap:7px 12px;font-size:14px}
+.kv dt{color:var(--ink2)}.kv dd{color:var(--ink)}
+.chip{display:inline-block;background:var(--gray-soft);border-radius:8px;padding:2px 9px;font-size:12px;color:var(--ink2);margin:2px 4px 2px 0;font-weight:500}
+.chip.blue{background:var(--blue-soft);color:var(--blue)}
+.chip.red{background:var(--red-soft);color:var(--red)}
+.chip.green{background:var(--green-soft);color:#248a3d}
+.chip.amber{background:var(--orange-soft);color:#c93400}
+ul.li{list-style:none}
+ul.li li{padding:8px 0 8px 20px;position:relative;font-size:14px;border-bottom:1px solid var(--gray-soft)}
+ul.li li:last-child{border-bottom:none}
+ul.li li:before{content:"";position:absolute;left:4px;top:16px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+ul.li.red li:before{background:var(--red)}
+ul.li.green li:before{background:var(--green)}
+ul.li.amber li:before{background:var(--orange)}
+.small{font-size:12px;color:var(--ink3)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+a{color:var(--blue);text-decoration:none}
+footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
+/* ===== 待办勾选 ===== */
+.todoRow{display:flex;align-items:flex-start;gap:11px;padding:12px 4px;border-bottom:1px solid var(--gray-soft)}
+.todoRow:last-child{border-bottom:none}
+.todoRow .ck{flex:none;width:24px;height:24px;border-radius:50%;border:2px solid var(--ink3);margin-top:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;transition:.15s}
+.todoRow .ck.on{background:var(--green);border-color:var(--green)}
+.todoRow .ck svg{width:13px;height:13px}
+.todoRow .bd{flex:1}
+.todoRow .bd .t1{font-size:14px;font-weight:600}
+.todoRow .bd .t2{font-size:12px;color:var(--ink2);margin-top:2px}
+.todoRow.done .bd .t1{text-decoration:line-through;color:var(--ink3)}
+.todoRow.done .bd .t2{color:var(--ink3)}
+/* ===== 空状态 ===== */
+.empty{text-align:center;padding:24px 12px;color:var(--ink3);background:var(--gray-soft);border-radius:var(--r-md)}
+.empty b{display:block;color:var(--ink2);font-size:14px;margin-bottom:4px;font-weight:600}
+.empty .btn{margin-top:12px}
+/* ===== 弹层表单（手机底部上滑 / 桌面居中） ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.36);z-index:96;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+.overlay.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;animation:up .25s ease}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet h3{font-size:18px;font-weight:700;margin-bottom:14px;display:flex;align-items:center}
+.sheet h3 .x{margin-left:auto;border:none;background:var(--gray-soft);width:32px;height:32px;border-radius:50%;font-size:16px;color:var(--ink2);cursor:pointer}
+.f-row{margin-bottom:12px}
+.f-row label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:5px}
+.f-row input,.f-row select,.f-row textarea{width:100%;border:none;background:var(--gray-soft);border-radius:var(--r-sm);padding:12px 13px;font-size:16px;font-family:inherit;color:var(--ink);outline:none}
+.f-row input:focus,.f-row select:focus,.f-row textarea:focus{box-shadow:0 0 0 2px var(--blue)}
+.f-row textarea{resize:vertical;min-height:66px}
+.f-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sheet .btnrow{display:flex;gap:10px;margin-top:16px}
+.sheet .btnrow .btn{flex:1;justify-content:center}
+/* toast */
+#toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(29,29,31,.92);color:#fff;font-size:14px;font-weight:500;padding:11px 20px;border-radius:980px;z-index:99;opacity:0;pointer-events:none;transition:.25s}
+#toast.on{opacity:1;transform:translateX(-50%)}
+/* ===== 响应式 ===== */
+@media (min-width:640px){.overlay{align-items:center}.sheet{border-radius:22px;padding-bottom:20px}}
+@media (max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}.grid2{grid-template-columns:1fr}}
+@media (max-width:560px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  header.top h1{font-size:25px}
+  .card{padding:15px}
+  body{font-size:14px}
+  table.cards,table.cards thead,table.cards tbody,table.cards tr,table.cards td{display:block}
+  table.cards thead{display:none}
+  table.cards tr{background:var(--gray-soft);border-radius:var(--r-md);margin-bottom:10px;padding:6px 4px}
+  table.cards td{border:none;padding:6px 10px}
+  table.cards td:before{content:attr(data-l);display:block;font-size:11px;color:var(--ink3);margin-bottom:1px;font-weight:600}
+}
+/* ===== AI 助手 ===== */
+#aiOverlay{position:fixed;inset:0;background:rgba(0,0,0,.36);z-index:95;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px)}
+#aiOverlay.on{display:flex}
+#aiPanel{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;height:86vh;display:flex;flex-direction:column;animation:up .25s ease}
+@media (min-width:640px){#aiOverlay{align-items:center}#aiPanel{border-radius:22px;height:78vh}}
+.ai-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.ai-head h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.ai-head .cfg{font-size:12px;color:var(--ink3)}
+.ai-head .x{margin-left:auto;border:none;background:var(--gray-soft);width:32px;height:32px;border-radius:50%;font-size:16px;color:var(--ink2);cursor:pointer}
+.ai-body{flex:1;overflow-y:auto;padding:14px 16px}
+.ai-msg{max-width:86%;margin:0 0 12px;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.ai-msg.user{margin-left:auto;background:var(--blue);color:#fff;border-bottom-right-radius:6px}
+.ai-msg.bot{background:var(--gray-soft);color:var(--ink);border-bottom-left-radius:6px}
+.ai-msg.err{background:var(--red-soft);color:var(--red)}
+.ai-preview{margin:0 0 12px;border:1px solid var(--blue);border-radius:14px;padding:12px;background:var(--blue-soft)}
+.ai-preview .pt{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px}
+.ai-preview .pv{font-size:13px;color:var(--ink);margin:4px 0;display:flex;gap:6px;align-items:flex-start}
+.ai-preview .pv input{margin-top:3px}
+.ai-foot{display:flex;gap:8px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.ai-foot textarea{flex:1;border:none;background:var(--gray-soft);border-radius:14px;padding:10px 13px;font-size:15px;font-family:inherit;color:var(--ink);resize:none;min-height:44px;max-height:110px;outline:none}
+.ai-foot .send{flex:none;border:none;background:var(--blue);color:#fff;border-radius:14px;padding:0 18px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px}
+.ai-foot .send:disabled{opacity:.5;cursor:not-allowed}
+.ai-typing{display:inline-flex;gap:3px;padding:4px 0}
+.ai-typing i{width:6px;height:6px;border-radius:50%;background:var(--ink3);animation:blink 1.2s infinite}
+.ai-typing i:nth-child(2){animation-delay:.2s}.ai-typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+/* 面板内 AI 分析小入口 */
+.ai-mini{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:none;background:var(--blue-soft);color:var(--blue);font-size:13px;cursor:pointer;vertical-align:middle;flex:none;transition:transform .15s}
+.ai-mini:hover{transform:scale(1.12)}
+/* 附件按钮与已载入提示 */
+.ai-attach{flex:none;border:none;background:var(--gray-soft);border-radius:12px;width:44px;min-height:44px;font-size:17px;cursor:pointer}
+.ai-dochip{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--blue-soft);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:6px}
+.ai-dochip .del{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>秋招工作台</h1>
+  <div class="sub" id="profileLine"></div>
+</header>
+<div class="toolbar">
+  <button class="btn primary" id="btnAddApp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新增投递</button>
+  <button class="btn" id="btnAI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>AI 助手</button>
+  <button class="btn" id="btnMore"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>更多操作</button>
+  <button class="btn hidden" id="btnDemo">载入示例数据</button>
+  <button class="btn hidden" id="btnExport">导出备份</button>
+  <button class="btn hidden" id="btnICS">导出日历</button>
+  <button class="btn hidden" id="btnBulk">批量导入</button>
+  <label class="btn hidden"><input type="file" id="fileImport" accept=".json" hidden></label>
+  <button class="btn hidden" id="btnReset">清空重置</button>
+  <button class="btn hidden" id="btnCloud"><span id="cloudLabel">云端同步</span></button>
+</div>
+
+<div class="today">
+  <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>今天要处理</h2>
+  <div id="todayList"></div>
+</div>
+
+<div class="stats" id="statRow"></div>
+
+<nav class="tabs"><div class="seg" id="tabs"></div></nav>
+
+<!-- 1 投递岗位 -->
+<section class="pane" data-p="applied">
+  <div class="card" id="guideCard" style="background:linear-gradient(180deg,#f0f6ff,#fff)">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.2-3 4"/><path d="M12 17h.01"/></svg>快速上手 <span class="note"><button class="btn small" data-toggle-guide="1">收起</button></span></h3>
+    <div id="guideBody">
+    <div class="grid2">
+      <ul class="li">
+        <li><b>① 填个人档案</b>：点标题下方一行右侧的「设置」，写入姓名 / 学校 / 专业 / 届别 / 主攻方向</li>
+        <li><b>② 录投递</b>：点顶栏「新增投递」，公司 + 岗位 + 日期 + 渠道 + 官网链接，5 个字段即可</li>
+      </ul>
+      <ul class="li amber">
+        <li><b>③ 建目标池</b>：在「筛选岗位」按优先级 P0→P3 添加目标清单，网申时间填进去就不会漏截止</li>
+        <li><b>④ 备份</b>：数据只存当前浏览器，换设备或清缓存前先「导出备份」JSON</li>
+      </ul>
+    </div>
+    <div class="small" style="margin-top:8px">不确定填什么样子？点顶栏「更多操作 → 载入示例数据」看一遍结构，看完用「清空重置」回到干净模板。</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>投递记录 <span class="note">点状态可直接改阶段 · 自动记时间线</span></h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <input id="appSearch" placeholder="搜索公司 / 岗位 / 备注 / 渠道" oninput="setAppFilter('q',this.value)" style="flex:1;min-width:160px;border:none;background:var(--gray-soft);border-radius:10px;padding:10px 12px;font-size:15px;font-family:inherit;color:var(--ink);outline:none">
+      <select id="appStageFilter" onchange="setAppFilter('stage',this.value)" style="border:none;background:var(--gray-soft);border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;color:var(--ink)">
+        <option value="all">全部状态</option><option value="doing">进行中</option><option value="Offer">Offer</option><option value="拒绝">已拒绝</option><option value="放弃">已放弃</option>
+      </select>
+    </div>
+    <div id="appList"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>事件时间线</h3>
+    <div class="tl" id="eventTimeline"></div>
+  </div>
+</section>
+
+<!-- 2 投递进度 -->
+<section class="pane" data-p="progress">
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6 16v-5M12 16V8M18 16v-9" stroke-width="2.4"/></svg>整体进度统计</h3>
+    <div id="progressCharts"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>投递节奏与渠道效果</h3>
+    <div id="rhythmArea"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>面试题库 <span class="note">跨岗位去重 · 出现次数越多越靠前</span></h3>
+    <div id="questionBank"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>各岗位进度管道 <span class="note">各阶段日期逐岗独立设置 · 随进度录入 · 卡片可直接拖入下一阶段</span></h3>
+    <div id="pipelines"></div>
+  </div>
+</section>
+
+<!-- 3 筛选岗位 -->
+<section class="pane" data-p="screen">
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5 5-2z"/></svg>目标岗位清单
+      <button class="ai-mini" data-ai-ctx="screen" title="AI 分析本页数据">✦</button>
+      <span class="note"><button class="btn small primary" data-add="mt">+ 添加目标</button></span></h3>
+    <div class="tbl-scroll"><table class="cards" id="mtTbl">
+      <thead><tr><th>优先级</th><th>公司 / 项目</th><th>方向</th><th>专业要求</th><th>城市</th><th>网申时间 / 截止</th><th>匹配点与行动</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>招聘信息来源
+      <span class="note"><button class="btn small primary" data-add="src">+ 添加来源</button></span></h3>
+    <div id="srcList"></div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16l-6 8v6l-4 2v-8L4 4z"/></svg>备选岗位池（低优先级 · 存档待决策）<span class="note" id="recCount"></span></h3>
+    <div class="tbl-scroll"><table class="cards" id="recTbl">
+      <thead><tr><th>公司</th><th>岗位</th><th>城市</th><th>匹配分</th><th>优先级</th><th>状态</th><th>筛选依据 / 行动建议</th><th>定制材料</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>筛选策略
+        <span class="note"><button class="btn small primary" data-add="strategy">编辑</button></span></h3>
+      <dl class="kv" id="strategyKv"></dl>
+    </div>
+    <div class="card">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.4-3 8.4-7 9-4-.6-7-4.6-7-9V7l7-4z"/><path d="M9.5 12l2 2 3.5-3.5"/></svg>简历版本库
+        <span class="note"><button class="btn small primary" data-add="resume">+ 添加</button></span></h3>
+      <div id="resumeList"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 Offer 对比 -->
+<section class="pane" data-p="offer">
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/></svg>Offer 对比
+      <button class="ai-mini" data-ai-ctx="offer" title="AI 分析本页数据">✦</button></h3>
+    <div id="offerArea"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg>终态记录 <span class="note">随投递记录自动更新</span></h3>
+    <div class="tbl-scroll"><table class="cards" id="closedTbl">
+      <thead><tr><th>公司</th><th>岗位</th><th>终态</th><th>终态原因 / 备注</th><th>落定日期</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 5 待办事项 -->
+<section class="pane" data-p="todo">
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg>行动待办
+      <span class="note"><button class="btn small primary" data-add="todo">+ 添加待办</button></span></h3>
+    <div id="todoList"></div>
+  </div>
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>待补信息（记录缺口，避免遗忘）
+      <span class="note"><button class="btn small primary" data-add="gap">+ 添加缺口</button></span></h3>
+    <ul class="li amber" id="gapList"></ul>
+  </div>
+</section>
+
+<!-- 6 使用说明 -->
+<section class="pane" data-p="about">
+  <div class="card" style="background:linear-gradient(180deg,#f0f6ff,#fff)">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 6.5L22 9.5l-5 5 1.2 7L12 18l-6.2 3.5L7 14.5l-5-5 7-1z"/></svg>这是什么</h3>
+    <div style="font-size:14px;line-height:1.8">这是一份给 <b>2027 届秋招求职者</b>的单文件求职管理看板：把投递记录、进度管道、目标岗位池、Offer 对比、行动待办和简历版本收进一个页面。打开即用、离线可用，数据永远只存在你自己的设备里。</div>
+    <div style="margin-top:10px"><span class="chip blue">单文件 HTML</span><span class="chip green">零依赖 · 离线可用</span><span class="chip">手机 / 电脑自适应</span><span class="chip">隐私优先</span></div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>功能亮点 <span class="note">四组能力 · 从记录到决策</span></h3>
+    <div class="grid2">
+      <div>
+        <h4>记录：把秋招的每条线都留住</h4>
+        <ul class="li">
+          <li><b>七阶段管道</b>：已投递 → Offer 逐岗独立记节点日期，进度越深颜色越深</li>
+          <li><b>面试题库</b>：多轮面试的题与复盘，跨岗位去重、按频次排序</li>
+          <li><b>目标池 + 一键转投递</b>：P0–P3 分级，投了自动生成记录</li>
+          <li><b>简历版本 + 投递关联</b>：PDF/Word 存本机，能查投的是哪版</li>
+        </ul>
+      </div>
+      <div>
+        <h4>分析：看清自己打得怎么样</h4>
+        <ul class="li">
+          <li><b>进度统计</b>：全链路漏斗 + 进行中占比环图</li>
+          <li><b>节奏与渠道</b>：近 30 天趋势 + 各渠道回音率、复试率</li>
+          <li><b>Offer 自动对比</b>：自定义维度权重，自动评分给推荐</li>
+          <li><b>得分明细</b>：每分可追溯到原始值与权重贡献</li>
+        </ul>
+      </div>
+      <div>
+        <h4>决策：今天该干什么</h4>
+        <ul class="li amber">
+          <li><b>今天要处理</b>：P0/P1 待办 + 截止倒计时 + 数据体检</li>
+          <li><b>凉投标记与重复检测</b>：30 天无更新自动标注，重复投递先提醒</li>
+          <li><b>拖拽推进</b>：卡片直接拖入下一阶段，自动记时间线</li>
+        </ul>
+      </div>
+      <div>
+        <h4>数据：随时带走，永不锁定</h4>
+        <ul class="li green">
+          <li><b>备份与合并</b>：JSON 导出 / 导入，可选去重合并而非覆盖</li>
+          <li><b>日历导出</b>：截止与面试生成 .ics，手机系统提醒</li>
+          <li><b>批量导入与搜索</b>：多行文本录历史投递；按公司/岗位/状态筛选</li>
+        </ul>
+      </div>
+      <div>
+        <h4>AI 助手：口述即可，自动填表</h4>
+        <ul class="li">
+          <li><b>自动整理</b>：把面试经历、Offer 待遇口述给 AI，自动结构化填入投递 / 面试 / Offer / 待办等板块</li>
+          <li><b>写入前确认</b>：解析结果先预览，勾选确认才落盘，理解错不会误写</li>
+          <li><b>模型自选</b>：内置 DeepSeek / 通义 / 智谱 / Moonshot / OpenAI，Key 存本机、直连厂商</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>技术实现</h3>
+    <ul class="li green">
+      <li><b>单文件零依赖</b>：全部 HTML + CSS + JS 在一个文件内，无框架、无构建、无外部资源，双击即用</li>
+      <li><b>纯前端架构</b>：localStorage 持久化 + JSON 一键导出 / 导入，换设备不丢数据</li>
+      <li><b>可选云同步</b>：默认完全离线；进阶用户可自配后端，内置分片上传、失败退避重试、sendBeacon 关页兜底、最后修改时间冲突合并</li>
+      <li><b>iOS 设计语言</b>：毛玻璃分段导航、pastel 徽章、底部上滑表单、SF 系字体栈</li>
+      <li><b>PWA 可安装</b>：运行时动态生成 manifest 与图标，一键装到手机桌面</li>
+      <li><b>全端响应式</b>：≤560px 表格自动转卡片堆叠，手机单手可用</li>
+      <li><b>隐私优先</b>：不接任何第三方服务，个人档案与附件永不出本机</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.2-3 4"/><path d="M12 17h.01"/></svg>60 秒体验路径</h3>
+    <ul class="li amber">
+      <li><b>第 1 步</b>：点顶栏「更多操作 → 载入示例数据」，10 秒看懂全部字段的填写效果</li>
+      <li><b>第 2 步</b>：切到「投递进度」，看漏斗图、占比环图和七阶段管道如何自动生成</li>
+      <li><b>第 3 步</b>：随便改一笔投递的阶段，回到时间线看事件自动落账</li>
+      <li><b>第 4 步</b>：点「导出备份」拿到 JSON，再「导入恢复」——数据主权完全在你手里</li>
+      <li><b>第 5 步</b>：「清空重置」回到干净模板，开始录入你自己的秋招</li>
+    </ul>
+  </div>
+</section>
+
+<footer>秋招工作台 ｜ 数据保存在本机浏览器 localStorage，不上传任何第三方 ｜ 建议定期「更多操作 → 导出备份」</footer>
+</div>
+
+<!-- 弹层 -->
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div id="toast"></div>
+
+<!-- AI 助手 -->
+<div id="aiOverlay">
+  <div id="aiPanel">
+    <div class="ai-head">
+      <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>AI 助手</h3>
+      <span class="cfg" id="aiCfg">未配置</span>
+      <button class="x" id="aiClear" title="清空对话" style="border:none;background:transparent;font-size:13px;color:var(--ink3);cursor:pointer">清空</button>
+      <button class="x" id="aiClose">✕</button>
+    </div>
+    <div class="ai-body" id="aiBody"></div>
+    <div id="aiDocArea" style="padding:0 16px"></div>
+    <div class="ai-foot">
+      <button class="btn small" id="aiSetup" style="min-height:44px;border-radius:14px">设置</button>
+      <button class="ai-attach" id="aiAttach" title="上传 Markdown 文档">📎</button>
+      <input type="file" id="aiFile" accept=".md,.markdown,text/markdown,text/plain" hidden>
+      <textarea id="aiInput" placeholder="例如：今天面了腾讯的产品岗，一面问了自我介绍和职业规划，我职业规划答得不好…" rows="1"></textarea>
+      <button class="send" id="aiSend">发送</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 阶段定义 ================= */
+const STAGES=["已投递","筛选中","AI面试","笔试","复试","终试","Offer"];
+const TERMINALS=["拒绝","放弃"];
+const TODAY=new Date().toISOString().slice(0,10);
+const uid=()=> "id"+Math.random().toString(36).slice(2,10);
+
+/* ================= 空模板初始数据（无任何个人信息） ================= */
+const BLANK={
+  profile:{name:"",school:"",major:"",degree:"",target:""},
+  apps:[], mt:[], todos:[], resumes:[], recs:[], sources:[], gaps:[]
+};
+
+/* ================= 示例数据（仅供了解字段含义，可一键载入/清空） ================= */
+const DEMO={
+  apps:[
+    {id:uid(),co:"示例科技",ti:"市场管培生",nat:"校招",date:TODAY,ch:"校招官网",url:"",stage:"筛选中",terminal:null,note:"示例记录：投递后处于简历筛选阶段",upd:TODAY,
+      interviews:[{round:"一面",date:TODAY,form:"视频面",questions:"自我介绍\n为什么选择快消行业\n讲一个你推动他人改变的例子",review:"示例复盘：第二问答得太泛，下次准备三个带数据的例子"}],
+      history:[{d:TODAY,stage:"已投递",note:"示例记录"},{d:TODAY,stage:"筛选中",note:"简历筛选中"}]},
+    {id:uid(),co:"示例集团",ti:"销售工程师",nat:"校招",date:TODAY,ch:"内推",url:"",stage:"AI面试",terminal:null,note:"示例记录：已通过 AI 面试，等待安排复试",upd:TODAY,
+      history:[{d:TODAY,stage:"已投递",note:"示例记录"},{d:TODAY,stage:"AI面试",note:"AI 面试待完成"}]},
+    {id:uid(),co:"示例制造",ti:"供应链专员",nat:"校招",date:TODAY,ch:"未标注",url:"",stage:"筛选中",terminal:null,note:"示例：投递后一直没回音",upd:new Date(Date.now()-40*86400000).toISOString().slice(0,10),
+      history:[{d:TODAY,stage:"已投递",note:"示例记录"}]},
+    {id:uid(),co:"示例智造",ti:"产品管培生",nat:"校招",date:TODAY,ch:"校招官网",url:"",stage:"Offer",terminal:null,note:"示例：口头 offer，待签三方",upd:TODAY,
+      offer:{structure:"基本工资 + 绩效奖金",monthly:"基本 12000 + 绩效 2000",months:"14 薪",social:"按全额基数缴纳，公积金 12%",probation:"180 天",location:"深圳 · 南山区",worktime:"9:00–18:00，双休，加班可申请调休",holiday:"法定假日 + 带薪年假 10 天",benefits:"餐补 500/月 · 交通补 300/月 · 人才住房补贴"},
+      history:[{d:TODAY,stage:"已投递",note:"示例记录"},{d:TODAY,stage:"Offer",note:"收到录用意向"}]},
+    {id:uid(),co:"示例控股",ti:"运营专员",nat:"校招",date:TODAY,ch:"校招平台",url:"",stage:"Offer",terminal:null,note:"示例：已签两方",upd:TODAY,
+      offer:{structure:"基本工资 + 季度奖",monthly:"基本 9500",months:"13 薪",social:"按最低基数缴纳，公积金 7%",probation:"90 天",location:"广州 · 天河区",worktime:"9:30–19:00，大小周",holiday:"法定假日 + 年假 5 天",benefits:"餐补 300/月"},
+      history:[{d:TODAY,stage:"已投递",note:"示例记录"},{d:TODAY,stage:"Offer",note:"收到录用意向"}]}
+  ],
+  mt:[
+    {id:uid(),p:"P0",co:"示例公司 · 管培生项目",dir:"综合管理方向",major:"不限专业",city:"北京 / 上海 / 深圳",time:"9 月开放，10 月中旬截止",dl:new Date(Date.now()+3*86400000).toISOString().slice(0,10),act:"示例：战略级项目，优先投递；提前准备行测"},
+    {id:uid(),p:"P1",co:"示例集团 · 销售培训生",dir:"大客户销售",major:"专业不限",city:"成都 / 重庆",time:"网申 9 月上旬启动",act:"示例：与实习经历契合，需突出客户沟通能力"}
+  ],
+  todos:[
+    {id:uid(),p:"P0",t:"示例：完成第一份目标岗位投递",d:"补齐公司与岗位信息后，把示例记录替换成自己的真实投递",w:"本周内",done:false},
+    {id:uid(),p:"P1",t:"示例：整理 3 个 STAR 故事",d:"用「情境—任务—行动—结果」结构写下最能证明能力的 3 件事",w:"本周内",done:false},
+    {id:uid(),p:"P2",t:"示例：每日刷一次招聘信息源",d:"保持输入，看到符合条件的新岗位就补进目标清单",w:"每日",done:false}
+  ],
+  resumes:[
+    {id:uid(),name:"示例：通用版简历 v1",content:"示例条目，仅用于展示字段。正式使用时删除本条，上传自己的 PDF / Word 简历。",date:TODAY,tags:"通用版",link:"",file:null}
+  ],
+  recs:[
+    {co:"示例备选公司",ti:"示例备选岗位",city:"待填",score:70,pri:"P3",st:"pending",basis:"示例：列出你考虑但优先级不高的岗位，便于后续决策",mat:"—"}
+  ],
+  sources:[
+    {id:uid(),n:"示例：目标公司招聘官网",u:"",d:"示例：最权威的岗位与流程信息来源，建议每天查看一次"}
+  ],
+  gaps:[
+    "示例：某笔早前投递的准确日期与渠道尚未确认，补记后删除本条"
+  ]
+};
+
+/* ================= 状态存取 ================= */
+const LS_KEY="wb_qiuzhao_template_v1";
+let S;
+try{S=JSON.parse(localStorage.getItem(LS_KEY))||null}catch(e){S=null}
+if(!S||!S.apps||!S.todos||!S.mt){
+  S=JSON.parse(JSON.stringify(BLANK));
+  try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){}
+}
+// 兼容旧版字段缺失：补齐后写回
+["mt","todos","apps","resumes","recs","sources","gaps","profile"].forEach(k=>{ if(!S[k]) S[k]=JSON.parse(JSON.stringify(BLANK[k])); });
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const stripTags=s=>String(s==null?"":s).replace(/<[^>]*>/g,"");
+/* 本地立即落盘 + 云端 400ms 防抖合并写入；immediate=true 时跳过防抖直接上云 */
+let _cloudTimer=null;
+function save(immediate){
+  S.rev=Date.now();S.savedAt=S.rev;
+  saveLocal();
+  if(immediate){ if(_cloudTimer){clearTimeout(_cloudTimer);_cloudTimer=null;} saveCloud(true); }
+  else scheduleCloud();
+}
+function scheduleCloud(){
+  if(!cloudOn())return;
+  if(_cloudTimer)clearTimeout(_cloudTimer);
+  _cloudTimer=setTimeout(()=>{ _cloudTimer=null; saveCloud(true); },400);
+}
+function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){if(!window._lsWarned){window._lsWarned=true;try{toast("浏览器存储不可用，数据仅在本次会话内有效")}catch(_){}}}}
+
+/* ===== 云端同步（默认关闭，需使用者自行配置自己的后端） ===== */
+const CLOUD_KEY="wb_qiuzhao_cloud";
+// 模板不含任何预设后端地址与令牌。请打开「云端同步」设置，填入你自己的服务端地址与 token。
+let CLOUD=null;
+try{
+  const _s=JSON.parse(localStorage.getItem(CLOUD_KEY)||"null");
+  if(_s&&_s.endpoint&&_s.token)CLOUD=_s;
+}catch(e){CLOUD=null}
+let _cloudState="idle"; // idle | syncing | synced | error
+function cloudOn(){return !!(CLOUD&&CLOUD.endpoint&&CLOUD.token)}
+function cloudURL(){return CLOUD.endpoint+(CLOUD.endpoint.includes("?")?"&":"?")+"token="+encodeURIComponent(CLOUD.token)}
+function refreshCloudBadge(){
+  const el=$("#cloudLabel");
+  if(!el)return;
+  const on=cloudOn();
+  let txt="云端同步", cls=false;
+  if(on){ txt = _cloudState==="error" ? "本地已存·云端失败" : (_cloudState==="synced" ? "已同步云端" : (_cloudState==="syncing" ? "同步中…" : "已连云端")); cls=true; }
+  else if(CLOUD&&CLOUD.endpoint){ txt="云端未授权"; cls=true; }
+  el.textContent=txt;
+  $("#btnCloud").classList.toggle("on",cls);
+  $("#btnCloud").classList.toggle("err",on&&_cloudState==="error");
+}
+// 校验云端返回的数据结构是否完整，避免用残缺数据覆盖本地
+function isFullData(d){return d&&Array.isArray(d.apps)&&Array.isArray(d.todos)&&Array.isArray(d.mt)}
+async function loadCloud(force){
+  if(!cloudOn())return false;
+  try{
+    const r=await fetch(cloudURL(),{cache:"no-store"});
+    if(!r.ok)throw 0;
+    const j=await r.json().catch(()=>null);
+    if(!j||!j.data)throw 0;
+    const data=j.data;
+    const localRev=S.rev||0, cloudRev=data.rev||0;
+    const hadLocal=isFullData(S);
+    if(!hadLocal || force){
+      if(isFullData(data)){
+        S=JSON.parse(JSON.stringify(BLANK));
+        Object.assign(S,data);
+        S.rev=cloudRev||Date.now(); S.savedAt=S.rev;
+        saveLocal();
+        _cloudState="synced";refreshCloudBadge();
+        toast("已从云端恢复最新数据 ✓");
+        return true;
+      }
+      return false;
+    }
+    if(cloudRev<localRev){ await saveCloud(true); }
+    _cloudState="synced";refreshCloudBadge();
+    return true;
+  }catch(e){
+    if(isFullData(S)) _cloudState="synced";
+    refreshCloudBadge();
+    return false;
+  }
+}
+// 云端同步时剥离简历文件正文（Base64），只保留 fileId 引用，避免整包超网关/文档上限
+function cleanForCloud(src){
+  const c=JSON.parse(JSON.stringify(src));
+  (c.resumes||[]).forEach(r=>{ if(r.file){ const f=r.file; r.file={fileId:f.fileId,name:f.name,size:f.size,type:f.type}; } });
+  return c;
+}
+async function postCloud(payload){
+  const r=await fetch(cloudURL(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(!r.ok)throw new Error("http "+r.status);
+  return r;
+}
+// 大载荷分片上传（防御性：绕过网关单包体积上限）
+async function saveCloudChunked(payload){
+  const raw=JSON.stringify(payload);
+  const bytes=new TextEncoder().encode(raw);
+  let b64=""; for(let i=0;i<bytes.length;i+=0x8000){ b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); }
+  b64=btoa(b64);
+  const CH=60000, total=Math.ceil(b64.length/CH), key="board_"+Date.now();
+  for(let i=0;i<total;i++){
+    const data=b64.slice(i*CH,(i+1)*CH);
+    const r=await fetch(cloudURL()+"&action=save-chunk",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,index:i,total,data})});
+    if(!r.ok)throw new Error("chunk "+i+" failed");
+  }
+  const mr=await fetch(cloudURL()+"&action=save-merge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,total})});
+  if(!mr.ok)throw new Error("merge failed");
+}
+// 后台退避重试：页面还开着就持续补传，直到云端收到
+let _bgRetryTimer=null,_bgRetries=0;
+function scheduleBackgroundRetry(){
+  if(_bgRetryTimer)return;
+  _bgRetryTimer=setTimeout(async()=>{
+    _bgRetryTimer=null;
+    if(_cloudState!=="error")return;
+    const ok=await saveCloud(true);
+    if(!ok&&_bgRetries<12){ _bgRetries++; scheduleBackgroundRetry(); }
+  },8000);
+}
+async function saveCloud(silent){
+  if(!cloudOn())return false;
+  S.rev=Date.now(); saveLocal();
+  const payload=cleanForCloud(S);
+  const raw=JSON.stringify(payload);
+  _cloudState="syncing";refreshCloudBadge();
+  try{
+    if(raw.length>90000){
+      await saveCloudChunked(payload);
+    }else{
+      let ok=false;
+      for(let i=1;i<=3;i++){
+        try{ await postCloud(payload); ok=true; break; }
+        catch(e){ if(i<3) await new Promise(r=>setTimeout(r,500*i)); }
+      }
+      if(!ok)throw new Error("retry exhausted");
+    }
+    _cloudState="synced";_bgRetries=0;
+    if(!silent)toast("已保存到云端 ✓");
+  }catch(e){
+    _cloudState="error";
+    if(!silent)toast("本地已保存，云端暂未收到（将自动重试）");
+    scheduleBackgroundRetry();
+  }
+  refreshCloudBadge();return _cloudState!=="error";
+}
+// 关闭/切走页面时用 sendBeacon 强制补传
+function flushOnHide(){
+  if(!cloudOn())return;
+  try{ S.rev=Date.now(); saveLocal(); }catch(e){}
+  try{
+    const payload=JSON.stringify(cleanForCloud(S));
+    if(navigator.sendBeacon) navigator.sendBeacon(cloudURL(),new Blob([payload],{type:"application/json"}));
+    try{ if(typeof fetch==="function"&&"keepalive" in new Request("")){ fetch(cloudURL(),{method:"POST",headers:{"Content-Type":"application/json"},body:payload,keepalive:true}); } }catch(e){}
+  }catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{if(document.hidden)flushOnHide();});
+window.addEventListener("pagehide",flushOnHide);
+window.addEventListener("beforeunload",flushOnHide);
+
+/* 简历文件：本地上传 PDF/Word，Base64 存浏览器，可直接打开 */
+let pendingResumeFile=null;
+const RESUME_FILE_RX=/\.(pdf|docx?|rtf)$/i;
+function onResumeFile(input){
+  const f=input.files&&input.files[0];
+  if(!f){pendingResumeFile=null;const h=document.getElementById("f_filehint");if(h)h.textContent="未上传文件";return;}
+  const ok=(f.type==="application/pdf"||f.type==="application/msword"||f.type==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"||RESUME_FILE_RX.test(f.name));
+  if(!ok){toast("仅支持 PDF / Word（.doc / .docx / .pdf）");input.value="";pendingResumeFile=null;return;}
+  if(f.size>5*1024*1024){toast("文件 >5MB，可能无法存入浏览器，建议压缩或改用链接");input.value="";pendingResumeFile=null;return;}
+  const rd=new FileReader();
+  rd.onload=()=>{pendingResumeFile={name:f.name,type:f.type||"application/octet-stream",size:f.size,data:rd.result};
+    const h=document.getElementById("f_filehint");if(h)h.textContent="已选入："+f.name+"（"+(f.size/1024).toFixed(0)+" KB）✓ 点保存即存入";toast("已选入文件，保存后可直接打开");};
+  rd.readAsDataURL(f);
+}
+function dataUrlToBlobUrl(dataUrl){
+  try{const m=dataUrl.match(/^data:([^;]+);base64,(.*)$/s);if(!m)return null;
+    const bin=atob(m[2]);const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([arr],{type:m[1]}));
+  }catch(e){return null;}
+}
+function dataUrlToBytes(dataUrl){
+  try{const m=dataUrl.match(/^data:([^;]+);base64,(.*)$/s);if(!m)return null;
+    const bin=atob(m[2]);const arr=new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+    return arr;
+  }catch(e){return null;}
+}
+function bytesToBase64(bytes){
+  let bin='';const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){ bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+chunk)); }
+  return btoa(bin);
+}
+function openResumeFile(r){
+  if(r.file&&r.file.data){const u=dataUrlToBlobUrl(r.file.data);if(u){window.open(u,"_blank","noopener");setTimeout(()=>URL.revokeObjectURL(u),60000);return;}}
+  if(r.file&&r.file.fileId){
+    if(!cloudOn()){toast("本机无缓存且未连云端，无法打开该简历");return;}
+    window.open(cloudURL()+"&action=file&fileId="+encodeURIComponent(r.file.fileId),"_blank","noopener");return;
+  }
+  if((r.link||"").trim()){window.open(r.link.trim(),"_blank","noopener");return;}
+  toast("这份简历还没有上传文件或链接，点「编辑」添加");
+}
+async function uploadResumeFile(file){
+  try{
+    const bytes = file.data ? dataUrlToBytes(file.data) : (file.bytes||null);
+    if(!bytes||!bytes.length) return null;
+    const CHUNK = 45000, total = Math.max(1, Math.ceil(bytes.length / CHUNK));
+    const key = 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    for(let i=0;i<total;i++){
+      const slice = bytes.subarray(i*CHUNK,(i+1)*CHUNK);
+      const data = bytesToBase64(slice);
+      let ok=false, tries=0;
+      while(!ok && tries<3){
+        tries++;
+        try{
+          const r=await fetch(cloudURL()+"&action=upload-chunk",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,index:i,total,data})});
+          const j=await r.json().catch(()=>null);
+          if(j&&j.ok)ok=true;
+        }catch(e){}
+      }
+      if(!ok) return null;
+    }
+    const mr=await fetch(cloudURL()+"&action=upload-merge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,total,name:file.name,type:file.type,size:file.size})});
+    const mj=await mr.json().catch(()=>null);
+    if(mj&&mj.ok&&mj.file) return mj.file;
+    return null;
+  }catch(e){return null;}
+}
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),1800)}
+const emptyBox=(title,sub,btn)=>`<div class="empty"><b>${title}</b>${sub||""}${btn||""}</div>`;
+/* 倒计时徽章：距离截止日期 ≤3 天红色，≤7 天橙色，其余灰色 */
+function dlBadge(dl){
+  if(!dl)return "";
+  const days=Math.round((Date.parse(dl)-Date.parse(TODAY))/86400000);
+  if(isNaN(days))return "";
+  if(days<0)return `<span class="badge b-reject">已截止</span>`;
+  if(days<=3)return `<span class="badge b-reject">仅剩 ${days} 天</span>`;
+  if(days<=7)return `<span class="badge b-warn">${days} 天后截止</span>`;
+  return `<span class="badge b-quit">${days} 天后截止</span>`;
+}
+/* Ghosted 检测：进行中但 30 天未更新 → 疑似已凉 */
+function isGhosted(a){
+  if(a.terminal||a.stage==="Offer")return false;
+  const u=Date.parse(a.upd||a.date||"");
+  if(!u||isNaN(u))return false;
+  return (Date.parse(TODAY)-u)/86400000>30;
+}
+
+/* ================= Offer 待遇解析与自动对比 ================= */
+function numList(s,min){
+  if(!s)return [];
+  const out=[];
+  String(s).replace(/(\d[\d,]*(?:\.\d+)?)/g,m=>{
+    const n=parseFloat(m.replace(/,/g,""));
+    if(!isNaN(n)&&n>=(min||0))out.push(n);
+  });
+  return out;
+}
+/* 从待遇文本提取可量化指标；提取不到的不参与评分 */
+function parseOffer(ov){
+  if(!ov)return null;
+  const r={};
+  const mn=numList(ov.monthly,100);
+  if(mn.length)r.monthly=mn.reduce((a,b)=>a+b,0);
+  const ms=numList(ov.months,0);
+  r.months=ms.length?ms[0]:null;
+  if(r.monthly)r.annual=r.monthly*(r.months||12);
+  const pm=String(ov.social||"").match(/(\d+(?:\.\d+)?)\s*%/g);
+  if(pm&&pm.length)r.fundPct=Math.max.apply(null,pm.map(x=>parseFloat(x)));
+  const sb=numList(ov.benefits,0);
+  if(sb.length)r.subsidy=sb.reduce((a,b)=>a+b,0);
+  const lm=String(ov.holiday||"").match(/年假\s*(\d+)/);
+  if(lm)r.leaveDays=+lm[1];
+  else{const c1=numList(ov.holiday,1).find(n=>n>=1&&n<=30);if(c1!=null)r.leaveDays=c1;}
+  const pb=String(ov.probation||"").match(/(\d+)\s*天/);
+  if(pb)r.probationDays=+pb[1];
+  else{const c2=numList(ov.probation,1).find(n=>n>=7&&n<=365);if(c2!=null)r.probationDays=c2;}
+  const wm=String(ov.worktime||"").match(/(\d{1,2})[:：](\d{2})\s*[\-–—~到]+\s*(\d{1,2})[:：](\d{2})/);
+  if(wm){
+    const st=+wm[1]+(+wm[2])/60,en=+wm[3]+(+wm[4])/60;
+    let h=en-st;if(h<0)h+=24;
+    if(h>0&&h<=16)r.workHours=Math.round(h*10)/10;
+  }
+  r.doubleRest=/双休/.test(String(ov.worktime||""));
+  return Object.keys(r).some(k=>r[k]!==null&&r[k]!==false)?r:null;
+}
+/* 评分维度定义：自动维度从待遇文本提取；手动维度由用户对每个 Offer 打 1–5 分 */
+const AUTO_DIMS=[
+  {key:"annual",label:"薪资水平（年包）",higher:true,fmt:v=>Math.round(v/10000*10)/10+" 万/年"},
+  {key:"workHours",label:"工作强度（日工时）",higher:false,fmt:v=>v+" 小时/日"},
+  {key:"leaveDays",label:"年假天数",higher:true,fmt:v=>v+" 天"},
+  {key:"fundPct",label:"公积金比例",higher:true,fmt:v=>v+"%"},
+  {key:"subsidy",label:"月补贴合计",higher:true,fmt:v=>v+" 元/月"},
+  {key:"probationDays",label:"试用期（越短越好）",higher:false,fmt:v=>v+" 天"}
+];
+const MANUAL_DIMS=[
+  {key:"mLocation",label:"工作地点"},
+  {key:"mLevel",label:"职级"},
+  {key:"mCareer",label:"发展前景"},
+  {key:"mIntensity",label:"工作强度（主观感受）"}
+];
+const CRITERIA_KEY="wb_qiuzhao_criteria";
+/* 自定义对比标准：默认 = 平衡优先（自动维度全开，手动维度关） */
+function loadCriteria(){
+  try{
+    const c=JSON.parse(localStorage.getItem(CRITERIA_KEY)||"null");
+    if(c&&Array.isArray(c.auto)&&Array.isArray(c.manual))return c;
+  }catch(e){}
+  return {auto:AUTO_DIMS.map(d=>({key:d.key,w:d.key==="annual"?30:d.key==="workHours"?25:d.key==="leaveDays"?15:10,on:true})),
+          manual:MANUAL_DIMS.map(d=>({key:d.key,w:0,on:false}))};
+}
+function saveCriteria(c){try{localStorage.setItem(CRITERIA_KEY,JSON.stringify(c))}catch(e){}}
+/* 依据自定义标准评分；手动维度取 offer.scores（1–5），权重按用户配置比例归一 */
+function scoreOffers(list,criteria){
+  const dims=[];
+  criteria.auto.forEach(c=>{if(!c.on)return;const def=AUTO_DIMS.find(d=>d.key===c.key);if(def)dims.push({key:def.key,label:def.label,w:+c.w||0,higher:def.higher,type:"auto",fmt:def.fmt});});
+  criteria.manual.forEach(c=>{if(!c.on)return;const def=MANUAL_DIMS.find(d=>d.key===c.key);if(def)dims.push({key:def.key,label:def.label,w:+c.w||0,higher:true,type:"manual"});});
+  const active=dims.filter(d=>d.w>0);
+  list.forEach(x=>x.norm={});
+  const dimBest={};
+  active.forEach(d=>{
+    let vals;
+    if(d.type==="auto"){
+      vals=list.filter(x=>x.parsed&&x.parsed[d.key]!=null);
+    }else{
+      vals=list.filter(x=>x.app.offer&&x.app.offer.scores&&x.app.offer.scores[d.key]!=null)
+               .map(x=>({app:x.app,norm:x.norm,parsed:Object.assign({},x.parsed,{[d.key]:x.app.offer.scores[d.key]})}));
+    }
+    if(vals.length<2)return;
+    const v=vals.map(x=>x.parsed[d.key]);
+    const max=Math.max.apply(null,v),min=Math.min.apply(null,v);
+    dimBest[d.key]=max===min?null:vals.find(x=>x.parsed[d.key]===(d.higher?max:min)).app.id;
+    vals.forEach(x=>{x.norm[d.key]=max===min?1:(d.higher?(x.parsed[d.key]-min)/(max-min):(max-x.parsed[d.key])/(max-min));});
+  });
+  const wSum=active.reduce((a,d)=>a+d.w,0)||1;
+  const scores=list.map(x=>{
+    let sum=0,ws=0;
+    active.forEach(d=>{if(x.norm[d.key]!=null){sum+=d.w*x.norm[d.key];ws+=d.w;}});
+    return {id:x.app.id,co:x.app.co,total:ws?sum/wSum:null,pct:ws?Math.round(sum/wSum*100):null,norm:x.norm,parsed:x.parsed,app:x.app,dims:active};
+  });
+  const ranked=scores.filter(s=>s.pct!=null).sort((a,b)=>b.pct-a.pct);
+  return {scores,dimBest,bestId:ranked.length?ranked[0].id:null,dims:active,wSum};
+}
+/* 对比标准设置表单：权重编辑 + 手动维度对每个 Offer 打分 */
+function criteriaForm(){
+  const c=loadCriteria();
+  const offers=S.apps.filter(a=>!a.terminal&&a.stage==="Offer");
+  const dimRow=(d,cfg,type)=>`
+    <div style="display:flex;align-items:center;gap:8px;margin:7px 0;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;flex:1;min-width:170px;cursor:pointer">
+        <input type="checkbox" data-crit-on="${type}:${d.key}" ${cfg.on?"checked":""} onchange="refreshManualScores()"> <b>${d.label}</b>
+      </label>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="small">权重</span>
+        <input type="number" min="0" max="100" data-crit-w="${type}:${d.key}" value="${cfg.w}" style="width:70px;border:none;background:var(--gray-soft);border-radius:10px;padding:9px 10px;font-size:15px;font-family:inherit">
+      </div>
+    </div>`;
+  const manualScores=offers.length?MANUAL_DIMS.filter(d=>{const cfg=c.manual.find(x=>x.key===d.key);return cfg&&cfg.on;}).map(d=>`
+    <div class="f-row"><label>${d.label} · 1–5 分（每个 Offer）</label>
+      ${offers.map(o=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0">
+        <span style="font-size:13px;min-width:130px">${esc(o.co)}</span>
+        <select data-score-for="${o.id}" data-score-key="${d.key}" style="border:none;background:var(--gray-soft);border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit">
+          <option value="">未评</option>
+          ${[1,2,3,4,5].map(n=>`<option value="${n}" ${((o.offer||{}).scores||{})[d.key]===n?"selected":""}>${n} 分</option>`).join("")}
+        </select>
+      </div>`).join("")}
+    </div>`).join(""):'<div class="small">暂无 Offer 记录，手动维度打分区在有 Offer 后显示。</div>';
+  openSheet(`<h3>自定义对比标准<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:10px">勾选参与对比的维度并设置权重（无需凑满 100，按比例自动归一）；保存后评分与推荐立即重算。</div>
+  <div style="font-size:13px;font-weight:700;color:var(--blue);margin:8px 0 4px">自动提取维度（从待遇文本解析数值）</div>
+  ${AUTO_DIMS.map(d=>dimRow(d,c.auto.find(x=>x.key===d.key)||{w:0,on:false},"a")).join("")}
+  <div style="font-size:13px;font-weight:700;color:var(--blue);margin:14px 0 4px">手动打分维度（1–5 分）</div>
+  ${MANUAL_DIMS.map(d=>dimRow(d,c.manual.find(x=>x.key===d.key)||{w:0,on:false},"m")).join("")}
+  <div id="manualScoreArea">${manualScores}</div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_criteria">保存并重算</button></div>`);
+}
+function collectCriteriaFromForm(){
+  const c={auto:[],manual:[]};
+  document.querySelectorAll("[data-crit-on]").forEach(cb=>{
+    const parts=cb.dataset.critOn.split(":");
+    const type=parts[0],key=parts.slice(1).join(":");
+    const w=document.querySelector(`[data-crit-w="${type}:${key}"]`);
+    const item={key:key,on:cb.checked,w:w?+w.value||0:0};
+    if(type==="m")c.manual.push(item);else c.auto.push(item);
+  });
+  return c;
+}
+/* 标准设置表单内：勾选手动维度后即时刷新打分区 */
+function refreshManualScores(){
+  const area=document.getElementById("manualScoreArea");if(!area)return;
+  const c=collectCriteriaFromForm();
+  const offers=S.apps.filter(a=>!a.terminal&&a.stage==="Offer");
+  area.innerHTML=offers.length?MANUAL_DIMS.filter(d=>{const cfg=c.manual.find(x=>x.key===d.key);return cfg&&cfg.on;}).map(d=>`
+    <div class="f-row"><label>${d.label} · 1–5 分（每个 Offer）</label>
+      ${offers.map(o=>`<div style="display:flex;align-items:center;gap:8px;margin:5px 0">
+        <span style="font-size:13px;min-width:130px">${esc(o.co)}</span>
+        <select data-score-for="${o.id}" data-score-key="${d.key}" style="border:none;background:var(--gray-soft);border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit">
+          <option value="">未评</option>
+          ${[1,2,3,4,5].map(n=>`<option value="${n}" ${((o.offer||{}).scores||{})[d.key]===n?"selected":""}>${n} 分</option>`).join("")}
+        </select>
+      </div>`).join("")}
+    </div>`).join(""):'<div class="small">暂无 Offer 记录，手动维度打分区在有 Offer 后显示。</div>';
+}
+
+/* ================= 渲染 ================= */
+function stageBadge(a){
+  if(a.terminal==="拒绝")return '<span class="badge b-reject">已拒绝</span>';
+  if(a.terminal==="放弃")return '<span class="badge b-quit">已放弃</span>';
+  if(a.stage==="Offer")return '<span class="badge b-offer">Offer</span>';
+  return '<span class="badge b-doing">'+esc(a.stage)+'</span>';
+}
+function renderProfile(){
+  const p=S.profile||{};
+  const parts=[p.name,p.school,p.major,p.degree,p.target].map(x=>(x||"").trim());
+  const has=parts.some(x=>x);
+  const line=has?parts.filter(x=>x).join(" · ")+" ｜ 主攻："+(p.target||"待填写"):"未填写个人档案 —— 姓名 / 学校 / 专业 / 届别 / 主攻方向";
+  $("#profileLine").innerHTML=`<span>${esc(line)}</span><button class="editSub" data-edit-profile="1">去设置</button>`;
+  document.title = (p.name?p.name+"的":"")+"秋招工作台";
+}
+function renderStats(){
+  const total=S.apps.length;
+  const doing=S.apps.filter(a=>!a.terminal&&a.stage!=="Offer").length;
+  const rej=S.apps.filter(a=>a.terminal==="拒绝").length;
+  const quit=S.apps.filter(a=>a.terminal==="放弃").length;
+  const offer=S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length;
+  const stats=[{n:total,l:"累计投递",c:"blue"},{n:doing,l:"进行中",c:"amber"},{n:rej,l:"被拒绝",c:"red"},
+   {n:quit,l:"主动放弃",c:"gray"},{n:S.mt.length,l:"目标岗位",c:"purple"},{n:offer,l:"Offer",c:"green"}];
+  $("#statRow").innerHTML=stats.map(s=>`<div class="stat ${s.c}"><div class="n">${s.n}</div><div class="l">${s.l}</div></div>`).join("");
+}
+function renderToday(){
+  const list=S.todos.filter(t=>!t.done&&(t.p==="P0"||t.p==="P1"));
+  const nearDl=(S.mt||[]).filter(m=>m.dl).map(m=>({m,days:Math.round((Date.parse(m.dl)-Date.parse(TODAY))/86400000)}))
+    .filter(x=>x.days>=0&&x.days<=14).sort((a,b)=>a.days-b.days);
+  const dlHtml=nearDl.map(x=>`
+  <div class="todo-item"><span class="tag hot">截止</span>
+  <div class="txt">${esc(x.m.co)}${x.days<=0?" 今天截止！":" 还剩 "+x.days+" 天截止"}<small>目标岗位 · ${esc(x.m.dir||"")} ｜ 去「筛选岗位」处理</small></div></div>`).join("");
+  /* 数据体检：把散落的风险聚合成一条行动提示 */
+  const tips=[];
+  const ghostN=S.apps.filter(isGhosted).length;
+  if(ghostN)tips.push({t:"有 "+ghostN+" 笔投递超过 30 天未更新，建议确认状态或放弃",s:"到「投递岗位」处理"});
+  if(!(S.resumes||[]).length)tips.push({t:"简历库还是空的，先建一份自己的简历版本",s:"到「筛选岗位」添加"});
+  if(!(S.mt||[]).length&&!S.apps.length)tips.push({t:"目标岗位池是空的，先按 P0–P3 建清单再投",s:"到「筛选岗位」添加"});
+  const tipHtml=tips.slice(0,2).map(x=>`
+  <div class="todo-item"><span class="tag">体检</span>
+  <div class="txt">${esc(x.t)}<small>${esc(x.s)}</small></div></div>`).join("");
+  $("#todayList").innerHTML=(tipHtml+dlHtml+list.map(t=>`
+  <div class="todo-item"><span class="tag ${t.p==="P0"?"hot":""}">${t.p==="P0"?"高优先":"临近"}</span>
+  <div class="txt">${esc(t.t)}<small>${esc(t.d)} ｜ ${esc(t.w)}</small></div></div>`).join(""))||'<div style="opacity:.85;font-size:14px;margin-top:6px">暂无需要处理的事项。去「待办事项」添加第一条，或去「筛选岗位」建目标清单。</div>';
+}
+const appFilter={q:"",stage:"all"};
+function setAppFilter(k,v){appFilter[k]=v;renderApps();}
+function renderApps(){
+  if(!S.apps.length){$("#appList").innerHTML=emptyBox("还没有投递记录","录入公司与岗位后，这里会按进度深浅自动排序、显示阶段配色。",'<button class="btn primary" data-add-app="1">+ 新增投递</button> <button class="btn" data-demo="1">先看示例</button>');return;}
+  let apps=S.apps.slice();
+  if(appFilter.q){const q=appFilter.q.trim().toLowerCase();if(q)apps=apps.filter(a=>[a.co,a.ti,a.note,a.ch].join(" ").toLowerCase().indexOf(q)>=0);}
+  if(appFilter.stage==="doing")apps=apps.filter(a=>!a.terminal&&a.stage!=="Offer");
+  else if(appFilter.stage!=="all")apps=apps.filter(a=>(a.terminal||a.stage)===appFilter.stage);
+  if(!apps.length){$("#appList").innerHTML=emptyBox("没有匹配的投递","换个关键词或把状态筛选改回「全部状态」。",'<button class="btn" onclick="appFilter.q=\'\';appFilter.stage=\'all\';document.getElementById(\'appSearch\').value=\'\';document.getElementById(\'appStageFilter\').value=\'all\';renderApps()">清除筛选</button>');return;}
+  apps.sort((a,b)=>appSortKey(b)-appSortKey(a));
+  $("#appList").innerHTML=apps.map(a=>{
+    const opts=STAGES.concat(TERMINALS).map(st=>{
+      const cur=a.terminal?a.terminal:a.stage;
+      return `<option value="${st}" ${st===cur?"selected":""}>${st}</option>`;
+    }).join("");
+    const t=appTint(a);
+    const ghost=isGhosted(a)?`<span class="badge b-quit">已 30 天未更新</span>`:"";
+    return `<div class="app-card" draggable="true" data-drag-app="${a.id}" style="background:${t.bg};box-shadow:inset 4px 0 0 ${t.bar}, var(--shadow)">
+    <div class="hd"><span class="co">${esc(a.co)}</span><span class="ti">${esc(a.ti)}</span>${stageBadge(a)}${ghost}</div>
+    <div class="meta"><span>${esc(a.nat||"—")}</span><span>投递：${esc(a.date||"—")}</span><span>渠道：${esc(a.ch||"—")}</span><span>更新：${esc(a.upd||"—")}</span></div>
+    <div style="font-size:13px;color:var(--ink2);margin-bottom:6px">${esc(a.note||"")}</div>
+    ${(()=>{if(!a.resumeId)return "";const r=(S.resumes||[]).find(x=>x.id===a.resumeId);return `<div class="small" style="margin-bottom:6px">关联简历：${esc(r?(r.name||"未命名简历"):"已删除的简历")}</div>`;})()}
+    ${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener" class="iconbtn" style="color:var(--blue);margin-bottom:6px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg>打开投递官网</a>`:`<span class="small" style="display:block;margin-bottom:6px">未填官网链接（点「编辑」可添加，填好后此处一键直达投递页）</span>`}
+    <div class="actions">
+      <select class="stageSel" data-stage="${a.id}">${opts}</select>
+      ${interviewBtn(a)}
+      <button class="iconbtn" data-edit-app="${a.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>编辑</button>
+      <button class="iconbtn red" data-del-app="${a.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/></svg>删除</button>
+    </div></div>`;
+  }).join("");
+}
+function renderEvents(){
+  const ev=[];
+  S.apps.forEach(a=>(a.history||[]).forEach(h=>ev.push({d:h.d,app:a.co+"·"+a.ti,stage:h.stage,note:h.note})));
+  if(!ev.length){$("#eventTimeline").innerHTML=emptyBox("暂无事件","每次新增投递或改动阶段，都会自动在这里记一笔带日期的事件。");return;}
+  ev.sort((x,y)=>String(x.d).localeCompare(String(y.d)));
+  $("#eventTimeline").innerHTML=ev.map(e=>{
+    const neg=(e.stage==="拒绝"||e.stage==="放弃")?"red":"";
+    return `<div class="tl-item ${neg}"><div class="d">${esc(e.d)}</div><div class="t"><b>${esc(e.app)}</b> <small>【${esc(e.stage)}】${esc(e.note||"")}</small></div></div>`;
+  }).join("");
+}
+const SVG_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg>';
+const SVG_X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const SVG_DOT='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';
+function furthestIdx(a){
+  let idx=STAGES.indexOf(a.stage);if(idx<0)idx=0;
+  (a.history||[]).forEach(h=>{const i=STAGES.indexOf(h.stage);if(i>idx)idx=i});
+  return idx;
+}
+/* 投递列表排序：进度越深越靠前；拒绝/放弃一律垫底 */
+function appSortKey(a){
+  if(a.terminal)return -1000+furthestIdx(a);
+  return furthestIdx(a);
+}
+/* 投递列表配色：进度越深背景越绿，拒绝/放弃转灰 */
+function appTint(a){
+  if(a.terminal==="拒绝")return {bg:"#ececed",bar:"#9b9ba0"};
+  if(a.terminal==="放弃")return {bg:"#f4f4f6",bar:"#c2c2c8"};
+  const pri=furthestIdx(a);
+  const bg=["#ffffff","#f6fdf9","#eefbf3","#e3f9ec","#d3f4e0","#bceccd","#a0e3b8"][pri];
+  const bar=["#d6efe0","#b3e8c4","#86dc9c","#5ad177","#34c759","#22b85a","#1aa84a"][pri];
+  return {bg,bar};
+}
+function renderPipelines(){
+  if(!S.apps.length){$("#pipelines").innerHTML=emptyBox("暂无管道","每笔投递一条 7 阶段管道，点阶段下的日期框可录入该节点时间。");return;}
+  $("#pipelines").innerHTML=S.apps.slice().sort((a,b)=>appSortKey(b)-appSortKey(a)).map(a=>{
+    const fi=furthestIdx(a);
+    let html="";
+    STAGES.forEach((s,i)=>{
+      let cls="",icon="";
+      if(a.terminal){
+        if(i<fi){cls="done";icon=SVG_OK}
+        else if(i===fi){cls=a.terminal==="拒绝"?"fail":"stop";icon=SVG_X}
+      }else{
+        if(i<fi){cls="done";icon=SVG_OK}
+        else if(i===fi){cls="cur";icon=SVG_DOT}
+      }
+      const sd=a.stageDates?.[s];
+      const reached=i<=fi;
+      const dim=reached?"":" style=\"opacity:.5\"";
+      const dl=`<label class="sdate"${dim}><input type="date" value="${sd||""}" data-app="${a.id}" data-stage="${s}" onchange="setAppStageDate('${a.id}','${s}',this.value)" title="${s} 节点日期（点选设置；未到达阶段也可先留空）"></label>`;
+      if(i>0)html+=`<div class="conn ${i<=fi?"done":""}"></div>`;
+      const dropAttr=(!a.terminal&&i>fi)?` data-drop-app="${a.id}" data-drop-stage="${s}" style="cursor:copy" title="把投递卡片拖到这里推进到「${s}」"`:"";
+      html+=`<div class="step ${cls}"${dropAttr}><div class="dot">${icon}</div><div class="sl">${s}</div>${dl}</div>`;
+    });
+    return `<div class="app-card"><div class="hd"><span class="co">${esc(a.co)}</span><span class="ti">${esc(a.ti)}</span>${stageBadge(a)}<span class="small" style="margin-left:auto">${esc(a.note||"")}</span></div><div class="pipeline">${html}</div></div>`;
+  }).join("");
+}
+/* 阶段日期：每个岗位独立持有 stageDates{阶段:YYYY-MM-DD}，随进度逐阶段录入 */
+function setAppStageDate(appId,stage,val){
+  const a=S.apps.find(x=>x.id===appId); if(!a)return;
+  a.stageDates=a.stageDates||{};
+  if(val){ a.stageDates[stage]=val; } else { delete a.stageDates[stage]; }
+  save(); renderPipelines();
+}
+function renderCharts(){
+  if(!S.apps.length){$("#progressCharts").innerHTML=emptyBox("暂无数据","录入第一笔投递后，这里自动生成漏斗图与进行中占比环图。");return;}
+  const cnt=s=>S.apps.filter(a=>furthestIdx(a)>=s).length;
+  const funnel=[["已投递",S.apps.length,"#007aff"],["进入筛选",cnt(1),"#5ac8fa"],["AI面试/笔试",cnt(2),"#af52de"],["复试及以后",S.apps.filter(a=>furthestIdx(a)>=4).length,"#ff9500"],["Offer",S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length,"#34c759"],["已拒绝",S.apps.filter(a=>a.terminal==="拒绝").length,"#ff3b30"],["主动放弃",S.apps.filter(a=>a.terminal==="放弃").length,"#8e8e93"]];
+  const max=Math.max(1,S.apps.length),rowH=38;
+  let bars="";
+  funnel.forEach((f,i)=>{
+    const w=Math.max(f[1]/max*340,f[1]>0?8:2),y=i*rowH+6;
+    bars+=`<text x="0" y="${y+16}" font-size="12" style="fill:var(--ink2)">${f[0]}</text>
+<rect x="100" y="${y}" width="${w}" height="22" rx="7" fill="${f[2]}" opacity="${f[1]>0?0.92:0.3}"/>
+<text x="${108+w}" y="${y+16}" font-size="13" font-weight="700" style="fill:var(--ink)">${f[1]}</text>`;
+  });
+  const doing=S.apps.filter(a=>!a.terminal&&a.stage!=="Offer").length,all=S.apps.length||1;
+  const r=54,c=2*Math.PI*r,dash=doing/all*c;
+  $("#progressCharts").innerHTML=`<div class="grid2">
+  <div><h4>投递漏斗（全链路）</h4>
+  <svg viewBox="0 0 520 ${funnel.length*rowH+10}" style="width:100%;max-width:520px">${bars}</svg></div>
+  <div style="text-align:center"><h4>进行中占比</h4>
+  <svg viewBox="0 0 160 160" style="width:150px">
+    <circle cx="80" cy="80" r="${r}" fill="none" style="stroke:var(--gray-soft)" stroke-width="15"/>
+    <circle cx="80" cy="80" r="${r}" fill="none" style="stroke:var(--blue)" stroke-width="15" stroke-linecap="round" stroke-dasharray="${dash} ${c-dash}" transform="rotate(-90 80 80)"/>
+    <text x="80" y="76" text-anchor="middle" font-size="24" font-weight="700" style="fill:var(--blue)">${doing}/${all}</text>
+    <text x="80" y="98" text-anchor="middle" font-size="12" style="fill:var(--ink2)">进行中</text>
+  </svg>
+  <div class="small">终态 ${S.apps.filter(a=>a.terminal).length} 笔：拒绝 ${S.apps.filter(a=>a.terminal==="拒绝").length} · 放弃 ${S.apps.filter(a=>a.terminal==="放弃").length}</div></div>
+</div>`;
+}
+/* 近 30 天投递趋势 + 渠道效果分析 */
+function renderRhythm(){
+  const area=$("#rhythmArea");if(!area)return;
+  if(!S.apps.length){area.innerHTML=emptyBox("暂无数据","录入投递后，这里自动生成近 30 天投递趋势与渠道转化分析。");return;}
+  const days=[],counts={};
+  for(let i=29;i>=0;i--){const d=new Date(Date.now()-i*86400000).toISOString().slice(0,10);days.push(d);counts[d]=0;}
+  S.apps.forEach(a=>{if(a.date&&counts[a.date]!=null)counts[a.date]++;});
+  const vals=days.map(d=>counts[d]),mx=Math.max(1,Math.max.apply(null,vals));
+  const bw=600/30;
+  const bars=vals.map((v,i)=>`<rect x="${(i*bw+1).toFixed(1)}" y="${(100-v/mx*84).toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${Math.max(v/mx*84,1.5).toFixed(1)}" rx="2" fill="${v?"var(--blue)":"var(--gray-soft)"}"/>`).join("");
+  let html=`<h4>近 30 天投递趋势</h4><svg viewBox="0 0 600 118" style="width:100%;max-width:600px">${bars}
+  <text x="0" y="114" font-size="10" style="fill:var(--ink3)">${days[0].slice(5)}</text>
+  <text x="598" y="114" text-anchor="end" font-size="10" style="fill:var(--ink3)">${days[29].slice(5)} ｜ 峰值 ${mx} 笔/日</text></svg>`;
+  const byCh={};
+  S.apps.forEach(a=>{
+    const ch=(a.ch||"").trim()||"未标注渠道";
+    byCh[ch]=byCh[ch]||{n:0,echo:0,interview:0,offer:0};
+    byCh[ch].n++;
+    const fi=furthestIdx(a);
+    if(fi>=2)byCh[ch].echo++;
+    if(fi>=4)byCh[ch].interview++;
+    if(!a.terminal&&a.stage==="Offer")byCh[ch].offer++;
+  });
+  const chans=Object.keys(byCh).map(k=>[k,byCh[k]]).sort((a,b)=>b[1].n-a[1].n);
+  if(chans.length>=2){
+    html+=`<h4 style="margin-top:16px">渠道效果 <span style="font-weight:400;font-size:12px;color:var(--ink3)">回音率 = 进入 AI 面试或更后</span></h4>`+
+    chans.map(([ch,c])=>{
+      const rate=c.n?Math.round(c.echo/c.n*100):0;
+      return `<div style="display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13px;flex-wrap:wrap">
+        <div style="min-width:90px;font-weight:600">${esc(ch)}</div>
+        <div class="score-cell" style="flex:1;min-width:120px"><div class="bar"><i style="width:${rate}%"></i></div><b>${rate}%</b></div>
+        <div class="small" style="min-width:180px">投递 ${c.n} · 回音 ${c.echo} · 复试 ${c.interview} · Offer ${c.offer}</div>
+      </div>`;
+    }).join("");
+  }
+  area.innerHTML=html;
+}
+const mtCls={"P0":"b-reject","P1":"b-warn","P2":"b-doing","P3":"b-quit"};
+function renderMt(){
+  const rows=S.mt;
+  $("#mtTbl tbody").innerHTML=rows.length?rows.map(m=>`<tr>
+  <td data-l="优先级"><span class="badge ${mtCls[m.p]||"b-doing"}">${esc(m.p)}</span></td>
+  <td data-l="公司/项目"><b>${esc(m.co)}</b></td><td data-l="方向">${esc(m.dir)}</td>
+  <td data-l="专业要求"><span class="chip green">${esc(m.major)}</span></td>
+  <td data-l="城市">${esc(m.city)}</td><td data-l="网申时间">${esc(m.time)} ${dlBadge(m.dl)}</td>
+  <td data-l="匹配点与行动">${esc(m.act)}</td>
+  <td data-l="操作" style="white-space:nowrap">${m.applied?'<span class="badge b-offer">已投</span>':`<button class="iconbtn" data-mt-apply="${m.id}">投递</button>`} <button class="iconbtn" data-edit-mt="${m.id}">编辑</button> <button class="iconbtn red" data-del-mt="${m.id}">删</button></td></tr>`).join("")
+  :`<tr><td data-l="提示" colspan="8">${emptyBox("目标清单为空","按 P0→P3 建池：P0 = 最想去且最匹配，P3 = 保底。填上网申时间就不怕错过截止。",'<button class="btn primary" data-add="mt">+ 添加目标</button>')}</td></tr>`;
+}
+function renderSources(){
+  const rows=S.sources||[];
+  $("#srcList").innerHTML=rows.length?rows.map(s=>`<div class="app-card" style="margin-bottom:0">
+      <div class="hd"><span class="co">${esc(s.n)}</span><span class="badge b-doing">信息源</span>
+        <span style="margin-left:auto;display:flex;gap:8px"><button class="iconbtn" data-edit-src="${s.id}">编辑</button><button class="iconbtn red" data-del-src="${s.id}">删</button></span></div>
+      <div style="font-size:13px;color:var(--ink2)">${esc(s.d||"")}</div>
+      ${s.u?`<div style="margin-top:6px"><a href="${esc(s.u)}" target="_blank" rel="noopener" style="word-break:break-all">${esc(s.u)}</a></div>`:""}
+    </div>`).join("")
+    :emptyBox("未录入招聘信息源","建议至少放三类：目标公司官网校招页、学校就业网/双选会通知、第三方信息聚合平台。",'<button class="btn primary" data-add="src">+ 添加来源</button>');
+}
+function renderRecs(){
+  const rows=S.recs||[];
+  $("#recCount").textContent=rows.length?`${rows.length} 条`:"";
+  $("#recTbl tbody").innerHTML=rows.length?rows.map(r=>`<tr>
+  <td data-l="公司"><b>${esc(r.co)}</b></td><td data-l="岗位">${esc(r.ti)}</td><td data-l="城市">${esc(r.city)}</td>
+  <td data-l="匹配分"><div class="score-cell"><div class="bar ${r.score>=84?"g":r.score>=75?"":"a"}"><i style="width:${r.score}%"></i></div><b>${r.score}</b></div></td>
+  <td data-l="优先级"><span class="badge ${mtCls[r.pri]||"b-quit"}">${esc(r.pri||"—")}</span></td>
+  <td data-l="状态"><span class="badge ${r.st==="preparing"?"b-purple":"b-quit"}">${r.st==="preparing"?"材料已备":"待决策"}</span></td>
+  <td data-l="筛选依据">${esc(r.basis)}</td><td data-l="定制材料">${esc(r.mat)}</td></tr>`).join("")
+  :`<tr><td data-l="提示" colspan="8">${emptyBox("备选池为空","把「想投但优先级不高」的岗位放这里，避免主清单臃肿、又不会彻底忘记。",'<button class="btn primary" data-add="rec">+ 添加备选</button>')}</td></tr>`;
+}
+function renderStrategy(){
+  let lines={};
+  try{lines=JSON.parse(localStorage.getItem("wb_qiuzhao_strategy_v1")||"null")||{}}catch(e){lines={}}
+  const row=(k,v,d)=>`<dt>${k}</dt><dd>${v? v : `<span class="small">${esc(d)}</span>`}</dd>`;
+  const chips=s=>s?String(s).split(/[、,，\s]+/).filter(Boolean).map(x=>`<span class="chip blue">${esc(x)}</span>`).join(""):'<span class="small">待填写</span>';
+  $("#strategyKv").innerHTML=
+    row("主攻方向",chips(lines.dir),"点右上「编辑」填写主攻方向")+
+    row("备选方向",chips(lines.alt),"暂未填写")+
+    row("意向城市",chips(lines.city),"暂未填写")+
+    row("信息源",lines.src?esc(lines.src):'<span class="small">见右侧「招聘信息来源」卡片</span>',"");
+}
+function renderResumes(){
+  if(!S.resumes.length){$("#resumeList").innerHTML=emptyBox("还没有简历版本","支持 PDF / Word 直接存入本机，点「+ 添加」上传你的第一份简历。",'<button class="btn primary" data-add="resume">+ 添加简历</button>');return;}
+  $("#resumeList").innerHTML=S.resumes.map(r=>{
+    const n=r.name||"未命名简历";
+    const hasFile=!!(r.file&&(r.file.data||r.file.fileId));
+    const hasLink=!!(r.link&&r.link.trim());
+    const hasContent=!!((r.content||"").trim());
+    const badge=hasFile?`<span class="chip blue">附件 ${esc(r.file.name)}</span>`:"";
+    return `<div class="sub" style="margin:10px 0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-weight:600;color:var(--ink);word-break:break-word">${esc(n)}</div>
+          <div style="margin-top:4px">${badge}${r.tags?`<span class="chip">${esc(r.tags)}</span>`:""}${r.date?`<span style="font-size:12px;color:var(--ink3);margin-left:6px">${esc(r.date)}</span>`:""}</div>
+        </div>
+        <div class="actions" style="flex-shrink:0">
+          ${hasFile?`<button class="iconbtn primary" data-open-resume="${r.id}">打开文件</button>`:""}
+          <button class="iconbtn" data-view-resume="${r.id}">查看</button>
+          <button class="iconbtn" data-edit-resume="${r.id}">编辑</button>
+          <button class="iconbtn red" data-del-resume="${r.id}">删除</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:5px">${hasFile?"已存文件，点「打开文件」直接查看":(hasLink?"已挂链接":(hasContent?"有说明文字":"未上传文件，点「编辑」上传 PDF/Word"))}</div>
+    </div>`;
+  }).join("");
+}
+function renderClosed(){
+  const closed=S.apps.filter(a=>a.terminal);
+  $("#closedTbl tbody").innerHTML=closed.length?closed.map(c=>`<tr>
+  <td data-l="公司"><b>${esc(c.co)}</b></td><td data-l="岗位">${esc(c.ti)}</td>
+  <td data-l="终态"><span class="badge ${c.terminal==="拒绝"?"b-reject":"b-quit"}">${c.terminal}</span></td>
+  <td data-l="原因">${esc(c.note)}</td><td data-l="落定日期">${esc(c.upd)}</td></tr>`).join("")
+  :'<tr><td data-l="提示" colspan="5" style="color:var(--ink3)">暂无终态记录</td></tr>';
+}
+function renderOffer(){
+  const offers=S.apps.filter(a=>!a.terminal&&a.stage==="Offer");
+  if(!offers.length){$("#offerArea").innerHTML=`<div style="text-align:center;padding:26px 12px">
+   <div style="font-size:42px;font-weight:700;color:var(--ink3)">0</div>
+   <div style="color:var(--ink2);margin-top:4px">当前暂无 Offer</div>
+   <div class="small" style="margin-top:6px">在「投递岗位」把某笔状态改为 Offer，并在编辑时填写「Offer 待遇详情」，这里会自动生成并排对比表与量化评分</div></div>`;return;}
+  const rows=[["薪资结构","structure","annual"],["月薪资构成","monthly","annual"],["几薪制","months","months"],["五险一金缴纳","social","fundPct"],
+    ["试用期","probation","probationDays"],["工作地点","location",null],["工作时间安排","worktime","workHours"],["节假日情况","holiday","leaveDays"],["其他福利补贴","benefits","subsidy"],["备注",null,null]];
+  const list=offers.map(a=>({app:a,parsed:parseOffer(a.offer)}));
+  const criteria=loadCriteria();
+  const analysis=scoreOffers(list,criteria);
+  const shortLabel=l=>l.replace(/（.*?）/g,"");
+  const wDesc=analysis.dims.map(d=>shortLabel(d.label)+" "+d.w).join(" · ")||"未启用任何维度";
+  /* 自动对比分析卡 */
+  let anaHtml="";
+  const scored=analysis.scores.filter(s=>s.pct!=null);
+  if(scored.length>=2){
+    const best=analysis.scores.find(s=>s.id===analysis.bestId);
+    const leadDims=analysis.dims.filter(d=>best.norm[d.key]!=null&&best.norm[d.key]>=0.99).map(d=>shortLabel(d.label));
+    const weakDim=s=>{const av=analysis.dims.filter(d=>s.norm[d.key]!=null);return av.length?av.slice().sort((a,b)=>s.norm[a.key]-s.norm[b.key])[0]:null;};
+    anaHtml=`<div class="app-card" style="background:var(--blue-soft);margin-bottom:12px">
+      <div class="hd"><span class="co">自动对比分析</span><span class="badge b-offer">综合推荐：${esc(best.co)}</span>
+        <button class="iconbtn" style="margin-left:auto" data-criteria-edit="1">自定义标准</button></div>
+      <div style="font-size:12px;color:var(--ink2);margin:6px 0 4px">当前权重：${esc(wDesc)} ｜ 随时改标准，保存即重算${leadDims.length?"；"+esc(best.co)+" 在 "+leadDims.join("、")+" 上领先":""}</div>`+
+      analysis.scores.map(s=>{
+        const adv=analysis.dims.filter(d=>s.norm[d.key]!=null&&s.norm[d.key]>=0.99).map(d=>shortLabel(d.label));
+        const weak=weakDim(s);
+        const detailRows=analysis.dims.filter(d=>s.norm[d.key]!=null).map(d=>{
+          const raw=d.type==="auto"?(d.fmt?d.fmt(s.parsed[d.key]):s.parsed[d.key]):(((s.app.offer||{}).scores||{})[d.key]+" 分");
+          const contrib=Math.round(d.w*s.norm[d.key]/analysis.wSum*100);
+          return `<tr><td data-l="维度">${esc(d.label)}</td><td data-l="原始值">${esc(String(raw))}</td><td data-l="维度得分">${Math.round(s.norm[d.key]*100)}%</td><td data-l="权重贡献">+${contrib}%</td></tr>`;
+        }).join("");
+        return `<div style="border-top:1px solid var(--line);padding-top:8px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="min-width:110px;font-weight:600;font-size:13px">${esc(s.co)}${s.id===analysis.bestId?' <span class="badge b-offer">推荐</span>':""}</div>
+            <div class="score-cell" style="flex:1;min-width:140px"><div class="bar ${s.id===analysis.bestId?"g":""}"><i style="width:${s.pct}%"></i></div><b>${s.pct}%</b></div>
+            <div class="small" style="min-width:170px;flex:1">${adv.length?"优势："+adv.join("、"):""}${adv.length&&weak?" · ":""}${weak?shortLabel(weak.label)+"相对偏弱":""}</div>
+          </div>
+          <details style="margin-top:6px"><summary class="small" style="cursor:pointer;color:var(--blue)">得分明细（原始值 → 归一得分 → 权重贡献）</summary>
+          <div class="tbl-scroll" style="margin-top:6px"><table class="cards"><thead><tr><th>维度</th><th>原始值</th><th>维度得分</th><th>权重贡献</th></tr></thead><tbody>${detailRows}</tbody></table></div></details>
+        </div>`;
+      }).join("")+`</div>`;
+  }else if(offers.length>=2){
+    anaHtml=`<div class="app-card" style="margin-bottom:12px"><div class="hd"><span class="co">自动对比分析</span><button class="iconbtn" style="margin-left:auto" data-criteria-edit="1">自定义标准</button></div>
+    <div class="small">可量化的对比信息不足——至少两个 Offer 在已启用维度上有数据（自动维度填含数字的待遇，或启用手动维度并打分）后，自动生成评分与推荐。</div></div>`;
+  }
+  /* 对比主表：维度最优绿色高亮，空值显示未填写 */
+  let html=anaHtml+`<div class="tbl-scroll"><table class="cards" style="min-width:${Math.max(1,offers.length)*230+110}px"><thead><tr>
+    <th style="min-width:100px">对比项</th>${offers.map(o=>`<th>${esc(o.co)}<div style="font-weight:400;font-size:12px;color:var(--ink3);margin-top:2px">${esc(o.ti)}</div></th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([label,key,dim])=>{
+    html+=`<tr><td data-l="对比项"><b>${label}</b></td>${offers.map(o=>{
+      const val=key?(((o.offer||{})[key])||""):(o.note||"");
+      const isBest=dim&&analysis.dimBest[dim]===o.id;
+      return `<td data-l="${label}"${isBest?' style="background:var(--green-soft)"':""}>${isBest?'<span class="badge b-offer">最优</span> ':""}${val?esc(val):'<span style="color:var(--ink3)">未填写</span>'}</td>`;
+    }).join("")}</tr>`;
+  });
+  html+=`</tbody></table></div>
+  <div class="small" style="margin-top:8px">共 ${offers.length} 个 Offer ｜ 修改待遇信息：到「投递岗位」点该笔记录的「编辑」</div>`;
+  $("#offerArea").innerHTML=html;
+}
+function renderTodos(){
+  if(!S.todos.length){$("#todoList").innerHTML=emptyBox("待办清单为空","P0/P1 会自动同步到顶部「今天要处理」，建议先录入网申截止与面试准备。",'<button class="btn primary" data-add="todo">+ 添加待办</button>');return;}
+  const showDone=(()=>{try{return localStorage.getItem("wb_qiuzhao_showdone")==="1"}catch(e){return false}})();
+  const order={P0:0,P1:1,P2:2,P3:3};
+  const pending=S.todos.filter(t=>!t.done).sort((a,b)=>order[a.p]-order[b.p]);
+  const doneList=S.todos.filter(t=>t.done);
+  const item=t=>`
+  <div class="todoRow ${t.done?"done":""}">
+    <div class="ck ${t.done?"on":""}" data-toggle-todo="${t.id}">${t.done?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg>':""}</div>
+    <div class="bd"><div class="t1"><span class="badge ${mtCls[t.p]||"b-doing"}" style="margin-right:6px">${esc(t.p)}</span>${esc(t.t)}</div>
+    <div class="t2">${esc(t.d)} ｜ ${esc(t.w)}</div></div>
+    <button class="iconbtn" data-edit-todo="${t.id}">编辑</button>
+    <button class="iconbtn red" data-del-todo="${t.id}">删</button>
+  </div>`;
+  let html=pending.map(item).join("");
+  if(doneList.length){
+    html+=`<div style="text-align:center;margin-top:10px"><button class="iconbtn" data-toggle-done="1">${showDone?"收起":"显示"}已完成（${doneList.length}）</button></div>`;
+    if(showDone)html+=doneList.map(item).join("");
+  }
+  $("#todoList").innerHTML=html;
+}
+function renderGaps(){
+  const rows=S.gaps||[];
+  $("#gapList").innerHTML=rows.length?rows.map((g,i)=>`<li>${esc(g)} <button class="iconbtn red" style="min-height:24px;padding:2px 9px;font-size:12px" data-del-gap="${i}">删</button></li>`).join("")
+  :'<li style="color:var(--ink3)">暂无缺口记录。遇到「投递日期忘了 / 岗位名不确定」就在这里记一条，之后补完删掉。</li>';
+}
+function renderAll(){renderProfile();renderStats();renderToday();renderApps();renderEvents();renderPipelines();renderCharts();renderRhythm();renderQuestionBank();renderMt();renderSources();renderRecs();renderStrategy();renderResumes();renderClosed();renderOffer();renderTodos();renderGaps()}
+
+/* ================= 弹层表单 ================= */
+let _sheetSnap=null,_suppressGuard=false;
+function sheetSnapshot(){
+  const parts=[];
+  document.querySelectorAll("#sheet input,#sheet select,#sheet textarea").forEach(el=>{
+    if(el.type==="file")return;
+    parts.push((el.id||el.name||el.tagName)+"="+(el.type==="checkbox"?el.checked:el.value));
+  });
+  return parts.join("|");
+}
+function openSheet(html){
+  $("#sheet").innerHTML=html;
+  $("#overlay").classList.add("on");
+  _sheetSnap=sheetSnapshot();
+}
+function closeSheet(force){
+  if(_suppressGuard){_suppressGuard=false;force=true;}
+  if(!force&&_sheetSnap!=null){
+    if(sheetSnapshot()!==_sheetSnap){
+      if(!confirm("表单内容已修改但尚未保存，确定关闭？"))return;
+    }
+  }
+  _sheetSnap=null;
+  $("#overlay").classList.remove("on");
+}
+$("#overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeSheet()});
+function stageOptions(cur){
+  return STAGES.concat(TERMINALS).map(s=>`<option value="${s}" ${s===cur?"selected":""}>${s}</option>`).join("");
+}
+function profileForm(){
+  const p=S.profile||{};
+  openSheet(`<h3>设置个人档案<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:12px">只保存在你本机浏览器，不会上传任何服务器。随时可留空。</div>
+  <div class="f-2"><div class="f-row"><label>姓名</label><input id="f_name" value="${esc(p.name||"")}" placeholder="如：张三"></div>
+  <div class="f-row"><label>学校</label><input id="f_school" value="${esc(p.school||"")}" placeholder="如：XX 大学"></div></div>
+  <div class="f-2"><div class="f-row"><label>专业</label><input id="f_major" value="${esc(p.major||"")}" placeholder="如：市场营销"></div>
+  <div class="f-row"><label>学历届别</label><input id="f_degree" value="${esc(p.degree||"")}" placeholder="如：本科 2027 届"></div></div>
+  <div class="f-row"><label>主攻方向</label><input id="f_target" value="${esc(p.target||"")}" placeholder="如：管培生 / 大客户销售 / 销售工程师"></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_profile">保存</button></div>`);
+}
+function appForm(a){
+  const isNew=!a;a=a||{co:"",ti:"",nat:"",date:TODAY,ch:"",url:"",stage:"已投递",terminal:null,note:""};
+  const cur=a.terminal||a.stage;
+  const ov=a.offer||{};
+  openSheet(`<h3>${isNew?"新增投递":"编辑投递"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-2"><div class="f-row"><label>公司</label><input id="f_co" value="${esc(a.co)}" placeholder="公司全称"></div>
+  <div class="f-row"><label>岗位</label><input id="f_ti" value="${esc(a.ti)}" placeholder="如：管培生 / 销售工程师"></div></div>
+  <div class="f-2"><div class="f-row"><label>性质</label><input id="f_nat" value="${esc(a.nat||"")}" placeholder="校招 / 全职 / 外企…"></div>
+  <div class="f-row"><label>投递日期</label><input id="f_date" value="${esc(a.date||"")}" placeholder="${TODAY}"></div></div>
+  <div class="f-2"><div class="f-row"><label>渠道</label><input id="f_ch" value="${esc(a.ch||"")}" placeholder="官网 / 内推 / 校招平台"></div>
+  <div class="f-row"><label>当前阶段</label><select id="f_stage">${stageOptions(cur)}</select></div></div>
+  <div class="f-row"><label>官网链接（投递/查询页）</label><input id="f_url" value="${esc(a.url||"")}" type="url" placeholder="https:// …"></div>
+  <div class="f-row"><label>关联简历版本（可选，便于复盘时确认投的是哪版）</label><select id="f_resume"><option value="">未关联</option>${(S.resumes||[]).map(r=>`<option value="${r.id}" ${a.resumeId===r.id?"selected":""}>${esc(r.name||"未命名简历")}</option>`).join("")}</select></div>
+  <div class="f-row"><label>备注 / 最新进展</label><textarea id="f_note">${esc(a.note||"")}</textarea></div>
+  <div class="f-row" style="margin-bottom:4px"><label style="color:var(--blue)">Offer 待遇详情（选填 · 填后自动生成并排对比表）</label></div>
+  <div class="f-2"><div class="f-row"><label>薪资结构</label><input id="f_o_struct" value="${esc(ov.structure||"")}" placeholder="如：基本工资 + 绩效"></div>
+  <div class="f-row"><label>月薪资构成</label><input id="f_o_monthly" value="${esc(ov.monthly||"")}" placeholder="如：基本 12000 + 绩效 2000"></div></div>
+  <div class="f-2"><div class="f-row"><label>几薪制</label><input id="f_o_months" value="${esc(ov.months||"")}" placeholder="如：14 薪"></div>
+  <div class="f-row"><label>五险一金（比例 / 基数）</label><input id="f_o_social" value="${esc(ov.social||"")}" placeholder="如：全额基数，公积金 12%"></div></div>
+  <div class="f-2"><div class="f-row"><label>试用期（天）</label><input id="f_o_probation" value="${esc(ov.probation||"")}" placeholder="如：180"></div>
+  <div class="f-row"><label>工作地点</label><input id="f_o_location" value="${esc(ov.location||"")}" placeholder="如：深圳 · 南山区"></div></div>
+  <div class="f-2"><div class="f-row"><label>工作时间（上下班 / 加班制度）</label><input id="f_o_worktime" value="${esc(ov.worktime||"")}" placeholder="如：9:00–18:00，双休"></div>
+  <div class="f-row"><label>节假日情况</label><input id="f_o_holiday" value="${esc(ov.holiday||"")}" placeholder="如：法定假日 + 年假 10 天"></div></div>
+  <div class="f-row"><label>其他福利补贴（餐补 / 交通 / 住房等）</label><textarea id="f_o_benefits">${esc(ov.benefits||"")}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save" data-app-id="${isNew?"":a.id}">保存</button></div>`);
+}
+function mtForm(m){
+  const isNew=!m;m=m||{p:"P2",co:"",dir:"",major:"不限专业",city:"",time:"",act:""};
+  openSheet(`<h3>${isNew?"添加目标":"编辑目标"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-2"><div class="f-row"><label>优先级</label><select id="f_p">${["P0","P1","P2","P3"].map(p=>`<option ${p===m.p?"selected":""}>${p}</option>`).join("")}</select></div>
+  <div class="f-row"><label>公司 / 项目</label><input id="f_co" value="${esc(m.co)}"></div></div>
+  <div class="f-row"><label>方向</label><input id="f_dir" value="${esc(m.dir)}" placeholder="如：综合管理 / 大客户销售"></div>
+  <div class="f-2"><div class="f-row"><label>专业要求</label><input id="f_major" value="${esc(m.major)}"></div>
+  <div class="f-row"><label>城市</label><input id="f_city" value="${esc(m.city)}"></div></div>
+  <div class="f-2"><div class="f-row"><label>网申时间（文字）</label><input id="f_time" value="${esc(m.time)}" placeholder="如：网申 9/1–10/15"></div>
+  <div class="f-row"><label>截止日期（精确到日，自动倒计时）</label><input id="f_dl" type="date" value="${esc(m.dl||"")}"></div></div>
+  <div class="f-row"><label>匹配点与行动</label><textarea id="f_act">${esc(m.act)}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_mt" data-id="${isNew?"":m.id}">保存</button></div>`);
+}
+function recForm(r){
+  const isNew=!r;r=r||{co:"",ti:"",city:"",score:70,pri:"P3",st:"pending",basis:"",mat:""};
+  openSheet(`<h3>${isNew?"添加备选岗位":"编辑备选岗位"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-2"><div class="f-row"><label>公司</label><input id="f_co" value="${esc(r.co)}"></div>
+  <div class="f-row"><label>岗位</label><input id="f_ti" value="${esc(r.ti)}"></div></div>
+  <div class="f-2"><div class="f-row"><label>城市</label><input id="f_city" value="${esc(r.city)}"></div>
+  <div class="f-row"><label>匹配分（0–100）</label><input id="f_score" type="number" min="0" max="100" value="${esc(r.score)}"></div></div>
+  <div class="f-2"><div class="f-row"><label>优先级</label><select id="f_pri">${["P1","P2","P3"].map(p=>`<option ${p===(r.pri||"P3")?"selected":""}>${p}</option>`).join("")}</select></div>
+  <div class="f-row"><label>状态</label><select id="f_st">${["pending","preparing"].map(s=>`<option value="${s}" ${s===r.st?"selected":""}>${s==="preparing"?"材料已备":"待决策"}</option>`).join("")}</select></div></div>
+  <div class="f-row"><label>筛选依据 / 行动建议</label><textarea id="f_basis">${esc(r.basis)}</textarea></div>
+  <div class="f-row"><label>定制材料</label><input id="f_mat" value="${esc(r.mat)}" placeholder="如：定制简历 / 网申草稿"></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_rec" data-i="${isNew?-1:S.recs.findIndex(x=>x===r)}">保存</button></div>`);
+}
+function srcForm(s){
+  const isNew=!s;s=s||{n:"",u:"",d:""};
+  openSheet(`<h3>${isNew?"添加信息来源":"编辑信息来源"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-row"><label>名称</label><input id="f_n" value="${esc(s.n)}" placeholder="如：XX 公司校招官网"></div>
+  <div class="f-row"><label>链接（可选）</label><input id="f_u" value="${esc(s.u||"")}" type="url" placeholder="https:// …"></div>
+  <div class="f-row"><label>用法说明</label><textarea id="f_d">${esc(s.d||"")}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_src" data-id="${isNew?"":s.id}">保存</button></div>`);
+}
+function strategyForm(){
+  const cur=JSON.parse(localStorage.getItem("wb_qiuzhao_strategy_v1")||"null")||{dir:"",alt:"",city:"",src:""};
+  openSheet(`<h3>编辑筛选策略<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:12px">多项之间用空格或顿号分隔，会自动渲染成标签。</div>
+  <div class="f-row"><label>主攻方向</label><input id="f_dir" value="${esc(cur.dir)}" placeholder="如：管培生 大客户销售"></div>
+  <div class="f-row"><label>备选方向</label><input id="f_alt" value="${esc(cur.alt)}" placeholder="如：运营 供应链"></div>
+  <div class="f-row"><label>意向城市</label><input id="f_city" value="${esc(cur.city)}" placeholder="如：北京 上海 成都"></div>
+  <div class="f-row"><label>信息源备注</label><input id="f_src" value="${esc(cur.src)}" placeholder="补充说明（可选）"></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_strategy">保存</button></div>`);
+}
+function todoForm(t){
+  const isNew=!t;t=t||{p:"P2",t:"",d:"",w:"",done:false};
+  openSheet(`<h3>${isNew?"添加待办":"编辑待办"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-2"><div class="f-row"><label>优先级</label><select id="f_p">${["P0","P1","P2","P3"].map(p=>`<option ${p===t.p?"selected":""}>${p}</option>`).join("")}</select></div>
+  <div class="f-row"><label>时间窗</label><input id="f_w" value="${esc(t.w)}" placeholder="本周内 / 网申截止前 3 天"></div></div>
+  <div class="f-row"><label>事项</label><input id="f_t" value="${esc(t.t)}"></div>
+  <div class="f-row"><label>详情</label><textarea id="f_d">${esc(t.d)}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_todo" data-id="${isNew?"":t.id}">保存</button></div>`);
+}
+function gapForm(){
+  openSheet(`<h3>添加待补信息<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-row"><label>缺口描述</label><textarea id="f_g" placeholder="如：某公司投递的准确日期待确认"></textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_gap">保存</button></div>`);
+}
+function resumeForm(r){
+  const isNew=!r;r=r||{name:"",link:"",content:"",date:TODAY,tags:"",file:null};
+  pendingResumeFile=null;
+  const curFile=r.file?`当前文件：<b>${esc(r.file.name)}</b>（${ (r.file.size/1024).toFixed(0) } KB）`:"尚未上传文件";
+  openSheet(`<h3>${isNew?"添加简历版本":"编辑简历版本"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-row"><label>简历名称</label><input id="f_rname" value="${esc(r.name)}" placeholder="如：通用版简历 v1"></div>
+  <div class="f-row">
+    <label>上传简历文件（PDF / Word .doc / .docx，点「打开文件」直接查看）</label>
+    <input type="file" id="f_file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onchange="onResumeFile(this)" style="padding:8px">
+    <div id="f_filehint" style="font-size:12px;color:var(--ink2);margin-top:2px">${curFile}</div>
+    ${r.file?`<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);margin-top:4px"><input type="checkbox" id="f_filedel"> 删除当前已存文件（不勾则保留）</label>`:""}
+  </div>
+  <div class="f-row"><label>标签（可选）</label><input id="f_rtags" value="${esc(r.tags||"")}" placeholder="如：通用 / 管培"></div>
+  <div class="f-row"><label>更新日期</label><input id="f_rdate" value="${esc(r.date||TODAY)}" placeholder="${TODAY}"></div>
+  <div class="f-row"><label>链接（可选，如投递系统/网盘地址）</label><input id="f_rlink" value="${esc(r.link||"")}" placeholder="https:// …"></div>
+  <div class="f-row"><label>说明 / 简历要点（可选）</label><textarea id="f_rcontent" style="min-height:80px">${esc(r.content||"")}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_resume" data-rid="${isNew?"":r.id}">保存</button></div>`);
+}
+function resumeView(r){
+  const n=r.name||"未命名简历";
+  const c=r.content||"";
+  const link=(r.link||"").trim();
+  openSheet(`<h3>简历：${esc(n)}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    ${r.file&&(r.file.data||r.file.fileId)?`<button class="btn primary" onclick="openResumeFile(S.resumes.find(x=>x.id==='${r.id}'))">打开文件（${esc(r.file.name)}）</button>`:""}
+    ${link?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">打开链接</a>`:""}
+  </div>
+  <div style="font-size:13px;color:var(--ink2);white-space:pre-wrap;line-height:1.8;background:var(--bg);border-radius:12px;padding:12px;max-height:50vh;overflow:auto">${c.trim()?esc(c):"（这份简历还没有填写说明文字）"}</div>
+  ${r.tags?`<div style="font-size:12px;color:var(--ink3);margin-top:8px">标签：${esc(r.tags)}</div>`:""}
+  ${r.date?`<div style="font-size:12px;color:var(--ink3)">更新日期：${esc(r.date)}</div>`:""}`);
+}
+
+/* ================= 面试记录与题库 ================= */
+function interviewList(appId){
+  const a=S.apps.find(x=>x.id===appId);if(!a)return;
+  const list=a.interviews||[];
+  openSheet(`<h3>面试记录 · ${esc(a.co)}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:10px">记录每一轮被问到的题与复盘；题目会自动汇入「面试题库」，跨岗位复用。</div>
+  ${list.length?list.map((it,i)=>`<div class="app-card" style="margin-bottom:8px">
+    <div class="hd"><span class="co">${esc(it.round||"未命名轮次")}</span><span class="badge b-doing">${esc(it.date||"未填日期")}</span>
+      ${it.form?`<span class="chip">${esc(it.form)}</span>`:""}
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="iconbtn" data-interview-edit="${i}" data-app="${a.id}">编辑</button>
+        <button class="iconbtn red" data-interview-del="${i}" data-app="${a.id}">删</button></span></div>
+    ${it.questions?`<div style="font-size:13px;color:var(--ink2);white-space:pre-wrap;margin-top:4px">${esc(it.questions)}</div>`:""}
+    ${it.review?`<div class="small" style="margin-top:4px">复盘：${esc(it.review)}</div>`:""}
+  </div>`).join(""):emptyBox("还没有面试记录","记下第一轮面试的问题，面试题库就开始了。")}
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">关闭</button><button class="btn primary" data-interview-add="${a.id}">+ 添加一轮</button></div>`);
+}
+function interviewForm(appId,idx){
+  const a=S.apps.find(x=>x.id===appId);if(!a)return;
+  a.interviews=a.interviews||[];
+  const isNew=idx==null;
+  const it=isNew?{round:"",date:TODAY,form:"",questions:"",review:""}:(a.interviews[idx]||{});
+  openSheet(`<h3>${isNew?"添加面试记录":"编辑面试记录"}<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="f-2"><div class="f-row"><label>轮次</label><input id="i_round" value="${esc(it.round||"")}" placeholder="如：一面 / HR面 / 终面"></div>
+  <div class="f-row"><label>日期</label><input id="i_date" type="date" value="${esc(it.date||TODAY)}"></div></div>
+  <div class="f-row"><label>形式</label><input id="i_form" value="${esc(it.form||"")}" placeholder="如：电话 / 视频 / 现场 / 群面"></div>
+  <div class="f-row"><label>被问到的问题（一行一题，自动汇入题库）</label><textarea id="i_questions" style="min-height:96px" placeholder="自我介绍&#10;为什么选这个岗位&#10;讲一个你解决的困难">${esc(it.questions||"")}</textarea></div>
+  <div class="f-row"><label>复盘：答得怎么样 / 下次怎么改</label><textarea id="i_review" style="min-height:80px">${esc(it.review||"")}</textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_interview" data-app="${appId}" data-idx="${isNew?"":idx}">保存</button></div>`);
+}
+function renderQuestionBank(){
+  const area=$("#questionBank");if(!area)return;
+  const map={};
+  S.apps.forEach(a=>(a.interviews||[]).forEach(it=>{
+    String(it.questions||"").split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(q=>{
+      map[q]=map[q]||{n:0,cos:new Set()};
+      map[q].n++;map[q].cos.add(a.co);
+    });
+  }));
+  const rows=Object.keys(map).map(q=>({q:q,n:map[q].n,cos:Array.from(map[q].cos)})).sort((a,b)=>b.n-a.n);
+  if(!rows.length){area.innerHTML=emptyBox("题库还是空的","在任意投递记录里点「面试」添加一轮面试，记下的问题会自动汇总到这里，出现次数越多排得越前。");return;}
+  area.innerHTML=`<div class="small" style="margin-bottom:8px">共 ${rows.length} 道题，按出现次数排序（跨岗位去重）</div>`+
+    rows.map(r=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--gray-soft)">
+      <span class="badge ${r.n>=2?"b-offer":"b-quit"}" style="flex:none">${r.n} 次</span>
+      <div style="flex:1;font-size:14px">${esc(r.q)}<div class="small" style="margin-top:2px">${esc(r.cos.join(" · "))}</div></div>
+    </div>`).join("");
+}
+/* 难度：面试记录入口按钮 */
+function interviewBtn(a){
+  const n=(a.interviews||[]).length;
+  return `<button class="iconbtn" data-interview-list="${a.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>面试${n?" "+n:""}</button>`;
+}
+
+/* ================= 日历导出 / 批量导入 / 合并 ================= */
+function downloadFile(name,type,content){
+  const blob=new Blob([content],{type:type});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+function icsEsc(s){return String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");}
+function exportICS(){
+  const compact=v=>String(v||"").replace(/[^0-9]/g,"");
+  const ev=[];
+  (S.mt||[]).forEach(m=>{if(m.dl)ev.push({date:m.dl,sum:"截止："+(m.co||"目标岗位"),desc:(m.dir||"")+(m.time?" ｜ "+m.time:"")});});
+  S.apps.forEach(a=>(a.interviews||[]).forEach(it=>{if(it.date)ev.push({date:it.date,sum:"面试："+a.co+" · "+(it.round||"面试"),desc:(it.form||"")+(it.questions?"\n"+it.questions:"")});}));
+  if(!ev.length){toast("没有可导出的截止日期或面试安排");return;}
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
+  let s="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Qiuzhao Workbench//CN\r\nCALSCALE:GREGORIAN\r\n";
+  ev.forEach((e,i)=>{
+    s+="BEGIN:VEVENT\r\nUID:"+Date.now()+"-"+i+"@qiuzhao\r\nDTSTAMP:"+stamp+"\r\nDTSTART;VALUE=DATE:"+compact(e.date)+"\r\nSUMMARY:"+icsEsc(e.sum)+"\r\nDESCRIPTION:"+icsEsc(e.desc)+"\r\nEND:VEVENT\r\n";
+  });
+  s+="END:VCALENDAR";
+  downloadFile("秋招日程_"+TODAY+".ics","text/calendar;charset=utf-8",s);
+  toast("已导出 "+ev.length+" 个日程，可导入手机日历");
+}
+function bulkImportForm(){
+  openSheet(`<h3>批量导入投递<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:8px">每行一条记录，字段用逗号或制表符分隔：<b>公司, 岗位, 渠道, 日期</b>（渠道与日期可省略，日期格式 YYYY-MM-DD）。</div>
+  <div class="f-row"><textarea id="b_rows" style="min-height:150px" placeholder="示例科技,市场管培生,校招官网,2026-10-20&#10;示例集团,销售工程师,内推&#10;示例控股,运营专员"></textarea></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_bulk">解析并导入</button></div>`);
+}
+function mergeData(cur,incoming){
+  const out=JSON.parse(JSON.stringify(cur));
+  ["apps","mt","todos","resumes","sources"].forEach(k=>{
+    out[k]=out[k]||[];
+    const seen=new Set(out[k].map(x=>x.id));
+    (incoming[k]||[]).forEach(x=>{if(!x.id||!seen.has(x.id)){out[k].push(x);seen.add(x.id);}});
+  });
+  out.recs=out.recs||[];
+  (incoming.recs||[]).forEach(r=>{if(!out.recs.some(x=>x.co===r.co&&x.ti===r.ti))out.recs.push(r);});
+  out.gaps=Array.from(new Set([...(out.gaps||[]),...(incoming.gaps||[])]));
+  if(incoming.profile&&Object.values(incoming.profile).some(Boolean))out.profile=incoming.profile;
+  return out;
+}
+
+/* 更多操作菜单：把低频动作收进一处，保持首屏清爽 */
+function moreForm(){
+  const row=(k,label,desc)=>`<div class="more-row" data-more="${k}"><span>${label}</span><span class="d">${desc}</span></div>`;
+  openSheet(`<h3>更多操作<button class="x" onclick="closeSheet()">✕</button></h3>
+  ${row("demo","载入示例数据","看一遍完整效果")}
+  ${row("export","导出备份（JSON）","换设备前先备份")}
+  ${row("ics","导出日历（.ics）","截止与面试导入手机")}
+  ${row("bulk","批量导入投递","从表格迁移历史记录")}
+  ${row("import","导入恢复","支持合并或覆盖")}
+  ${row("cloud","云端同步","可选，需自配后端")}
+  ${row("reset","清空重置","回到空模板")}`);
+}
+function moreDo(k){
+  closeSheet(true);
+  setTimeout(()=>{
+    const map={demo:"#btnDemo",export:"#btnExport",ics:"#btnICS",bulk:"#btnBulk",import:"#fileImport",cloud:"#btnCloud",reset:"#btnReset"};
+    const el=map[k]?$(map[k]):null;
+    if(el)el.click();
+  },120);
+}
+
+/* 快速上手折叠：老用户收起后不再占首屏 */
+function applyGuideState(){
+  const hidden=(()=>{try{return localStorage.getItem("wb_qiuzhao_hideguide")==="1"}catch(e){return false}})();
+  const body=document.getElementById("guideBody"),card=document.getElementById("guideCard");
+  if(!body||!card)return;
+  body.style.display=hidden?"none":"";
+  const btn=card.querySelector("[data-toggle-guide]");
+  if(btn)btn.textContent=hidden?"展开":"收起";
+}
+
+/* ================= 事件委托 ================= */
+document.addEventListener("click",async e=>{
+  const el=e.target.closest("[data-add],[data-add-app],[data-edit-app],[data-del-app],[data-edit-mt],[data-del-mt],[data-mt-apply],[data-edit-src],[data-del-src],[data-toggle-todo],[data-edit-todo],[data-del-todo],[data-toggle-done],[data-del-gap],[data-edit-profile],[data-criteria-edit],[data-interview-list],[data-interview-add],[data-interview-edit],[data-interview-del],[data-open-resume],[data-view-resume],[data-edit-resume],[data-del-resume],#f_save,#f_save_mt,#f_save_todo,#f_save_rec,#f_save_src,#f_save_strategy,#f_save_gap,#f_save_profile,#f_save_resume,#f_save_criteria,#f_save_interview,#f_save_bulk,[data-more],[data-toggle-guide],[data-demo]");
+  if(!el)return;
+  const d=el.dataset;
+  if(el.id&&el.id.indexOf("f_save")===0)_suppressGuard=true;
+  if(d.more){moreDo(d.more);return;}
+  if(d.toggleGuide){
+    try{localStorage.setItem("wb_qiuzhao_hideguide",(localStorage.getItem("wb_qiuzhao_hideguide")==="1")?"0":"1")}catch(e){}
+    applyGuideState();return;
+  }
+  if(d.demo){$("#btnDemo").click();return;}
+  if(d.interviewList)return interviewList(d.interviewList);
+  if(d.interviewAdd)return interviewForm(d.interviewAdd);
+  if(d.interviewEdit!=null&&d.app)return interviewForm(d.app,+d.interviewEdit);
+  if(d.interviewDel!=null&&d.app){
+    const a=S.apps.find(x=>x.id===d.app);if(!a)return;
+    if(confirm("删除这条面试记录？")){a.interviews.splice(+d.interviewDel,1);save(true);renderAll();interviewList(a.id);toast("已删除")}
+    return;
+  }
+  if(el.id==="f_save_interview"){
+    const a=S.apps.find(x=>x.id===el.dataset.app);if(!a)return;
+    a.interviews=a.interviews||[];
+    const obj={round:$("#i_round").value.trim(),date:$("#i_date").value.trim()||TODAY,form:$("#i_form").value.trim(),questions:$("#i_questions").value.trim(),review:$("#i_review").value.trim()};
+    if(el.dataset.idx!=="")a.interviews[+el.dataset.idx]=Object.assign({},a.interviews[+el.dataset.idx],obj);
+    else a.interviews.push(obj);
+    save(true);closeSheet();renderAll();interviewList(a.id);toast("已保存");return;
+  }
+  if(el.id==="f_save_bulk"){
+    const lines=$("#b_rows").value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+    let ok=0,skip=0;
+    lines.forEach(line=>{
+      const p=line.split(/\t|,|，/).map(x=>x.trim());
+      if(!p[0])return;
+      const ti=p[1]||"未命名岗位";
+      if(S.apps.some(x=>(x.co||"")===p[0]&&(x.ti||"")===ti)){skip++;return;}
+      S.apps.push({id:uid(),co:p[0],ti:ti,nat:"校招",date:/^\d{4}-\d{2}-\d{2}$/.test(p[3]||"")?p[3]:TODAY,ch:p[2]||"",url:"",stage:"已投递",terminal:null,note:"批量导入",upd:TODAY,history:[{d:TODAY,stage:"已投递",note:"批量导入"}]});
+      ok++;
+    });
+    if(!ok&&!skip){toast("没有解析到有效行");return;}
+    save(true);closeSheet();renderAll();
+    toast("已导入 "+ok+" 条"+(skip?"，跳过 "+skip+" 条重复":""));return;
+  }
+  if(d.criteriaEdit)return criteriaForm();
+  if(el.id==="f_save_criteria"){
+    const c=collectCriteriaFromForm();
+    if(!c.auto.some(x=>x.on&&x.w>0)&&!c.manual.some(x=>x.on&&x.w>0)){toast("请至少启用一个权重大于 0 的维度");return;}
+    saveCriteria(c);
+    document.querySelectorAll("[data-score-for]").forEach(sel=>{
+      const a=S.apps.find(x=>x.id===sel.dataset.scoreFor);if(!a)return;
+      if(sel.value){
+        a.offer=a.offer||{};a.offer.scores=a.offer.scores||{};
+        a.offer.scores[sel.dataset.scoreKey]=+sel.value;
+      }
+    });
+    save(true);closeSheet();renderAll();toast("对比标准已保存，评分已重算");return;
+  }
+  if(d.editProfile)return profileForm();
+  if(d.mtApply){
+    const m=S.mt.find(x=>x.id===d.mtApply);if(!m)return;
+    const co=(m.co||"").split("·")[0].trim()||m.co;
+    const ti=(m.dir||"").trim()||"未命名岗位";
+    const dup=S.apps.find(x=>(x.co||"")===co&&(x.ti||"")===ti);
+    if(dup&&!confirm("投递记录中已有「"+dup.co+" · "+dup.ti+"」（当前阶段："+(dup.terminal||dup.stage)+"）。\n仍要再录一条吗？"))return;
+    S.apps.push({id:uid(),co:co,ti:ti,nat:"校招",date:TODAY,ch:"",url:"",stage:"已投递",terminal:null,note:"来自目标清单："+(m.co||""),upd:TODAY,history:[{d:TODAY,stage:"已投递",note:"来自目标清单"}]});
+    m.applied=true;
+    save(true);renderAll();toast("已转为投递记录");return;
+  }
+  if(d.add==="mt")return mtForm();
+  if(d.add==="todo")return todoForm();
+  if(d.add==="resume")return resumeForm();
+  if(d.add==="rec")return recForm();
+  if(d.add==="src")return srcForm();
+  if(d.add==="gap")return gapForm();
+  if(d.add==="strategy")return strategyForm();
+  if(d.addApp||el.id==="btnAddApp")return appForm();
+  if(d.editResume)return resumeForm(S.resumes.find(r=>r.id===d.editResume));
+  if(d.openResume){const r=S.resumes.find(x=>x.id===d.openResume);if(!r)return;openResumeFile(r);return;}
+  if(d.viewResume){const r=S.resumes.find(x=>x.id===d.viewResume);if(!r)return;if((r.file&&r.file.data)){openResumeFile(r);return}if((r.link||"").trim()&&!(r.content||"").trim()){window.open(r.link.trim(),"_blank","noopener");return}resumeView(r);return;}
+  if(d.editApp)return appForm(S.apps.find(a=>a.id===d.editApp));
+  if(d.delApp){const a=S.apps.find(x=>x.id===d.delApp);if(confirm(`删除「${a.co}·${a.ti}」的投递记录？`)){S.apps=S.apps.filter(x=>x.id!==d.delApp);save();renderAll();toast("已删除")}return}
+  if(d.editMt)return mtForm(S.mt.find(m=>m.id===d.editMt));
+  if(d.delMt){S.mt=S.mt.filter(m=>m.id!==d.delMt);save();renderAll();toast("已删除");return}
+  if(d.editSrc)return srcForm((S.sources||[]).find(s=>s.id===d.editSrc));
+  if(d.delSrc){S.sources=S.sources.filter(s=>s.id!==d.delSrc);save();renderAll();toast("已删除");return}
+  if(d.toggleTodo){const t=S.todos.find(x=>x.id===d.toggleTodo);t.done=!t.done;save();renderAll();toast(t.done?"已完成":"已恢复");return}
+  if(d.toggleDone){try{localStorage.setItem("wb_qiuzhao_showdone",(localStorage.getItem("wb_qiuzhao_showdone")==="1")?"0":"1")}catch(e){}renderTodos();return}
+  if(d.editTodo)return todoForm(S.todos.find(t=>t.id===d.editTodo));
+  if(d.delTodo){S.todos=S.todos.filter(t=>t.id!==d.delTodo);save();renderAll();toast("已删除");return}
+  if(d.delGap){S.gaps.splice(+d.delGap,1);save();renderAll();return}
+  if(d.delResume){S.resumes=S.resumes.filter(r=>r.id!==d.delResume);save();renderAll();toast("已删除");return}
+  if(el.id==="f_save_profile"){
+    S.profile={name:$("#f_name").value.trim(),school:$("#f_school").value.trim(),major:$("#f_major").value.trim(),degree:$("#f_degree").value.trim(),target:$("#f_target").value.trim()};
+    save(true);closeSheet();renderAll();toast("已更新个人档案");return;
+  }
+  if(el.id==="f_save"){
+    const v=id=>document.getElementById(id).value.trim();
+    const st=v("f_stage");const terminal=TERMINALS.includes(st)?st:null;
+    const stage=terminal?(S.apps.find(a=>a.id===el.dataset.appId)?.stage||"已投递"):st;
+    const offer={structure:v("f_o_struct"),monthly:v("f_o_monthly"),months:v("f_o_months"),social:v("f_o_social"),probation:v("f_o_probation"),location:v("f_o_location"),worktime:v("f_o_worktime"),holiday:v("f_o_holiday"),benefits:document.getElementById("f_o_benefits").value.trim()};
+    const offerEmpty=!Object.values(offer).some(x=>x);
+    if(el.dataset.appId){
+      const a=S.apps.find(x=>x.id===el.dataset.appId);
+      const oldCur=a.terminal||a.stage;
+      Object.assign(a,{co:v("f_co"),ti:v("f_ti"),nat:v("f_nat"),date:v("f_date"),ch:v("f_ch"),url:v("f_url"),note:v("f_note"),resumeId:$("#f_resume")?$("#f_resume").value:""});
+      a.offer=offerEmpty?null:offer;
+      if(terminal){a.terminal=terminal}else{a.terminal=null;a.stage=st}
+      if(oldCur!==st){a.upd=TODAY;a.history=a.history||[];a.history.push({d:TODAY,stage:st,note:v("f_note")||"阶段更新"})}
+    }else{
+      // 重复投递检测：公司名+岗位名完全重复时先提醒（按同一岗位再投一次属正常行为，确认后仍允许）
+      const dup=S.apps.find(x=>(x.co||"").trim().toLowerCase()===v("f_co").toLowerCase()&&(x.ti||"").trim().toLowerCase()===v("f_ti").toLowerCase());
+      if(dup&&v("f_co")&&v("f_ti")){
+        if(!confirm("你已投递过「"+dup.co+" · "+dup.ti+"」（当前阶段："+(dup.terminal||dup.stage)+"）。\n仍要再录一条吗？"))return;
+      }
+      S.apps.push({id:uid(),co:v("f_co")||"未命名公司",ti:v("f_ti")||"未命名岗位",nat:v("f_nat"),date:v("f_date")||TODAY,ch:v("f_ch"),url:v("f_url"),stage:stage,terminal:terminal,note:v("f_note"),offer:offerEmpty?null:offer,resumeId:$("#f_resume")?$("#f_resume").value:"",upd:TODAY,history:[{d:TODAY,stage:st,note:v("f_note")||"新增投递"}]});
+    }
+    save(true);closeSheet();renderAll();toast("已保存");return;
+  }
+  if(el.id==="f_save_mt"){
+    const v=id=>document.getElementById(id).value.trim();
+    const obj={p:v("f_p"),co:v("f_co"),dir:v("f_dir"),major:v("f_major"),city:v("f_city"),time:v("f_time"),dl:document.getElementById("f_dl").value||"",act:v("f_act")};
+    if(el.dataset.id)Object.assign(S.mt.find(m=>m.id===el.dataset.id),obj);
+    else S.mt.push(Object.assign({id:uid()},obj));
+    save(true);closeSheet();renderAll();toast("已保存");return;
+  }
+  if(el.id==="f_save_rec"){
+    const v=id=>document.getElementById(id).value.trim();
+    const obj={co:v("f_co"),ti:v("f_ti"),city:v("f_city"),score:Math.max(0,Math.min(100,+v("f_score")||0)),pri:v("f_pri"),st:v("f_st"),basis:v("f_basis"),mat:v("f_mat")};
+    const i=+el.dataset.i;
+    if(i>=0)Object.assign(S.recs[i],obj); else S.recs.push(obj);
+    save(true);closeSheet();renderAll();toast("已保存");return;
+  }
+  if(el.id==="f_save_src"){
+    const v=id=>document.getElementById(id).value.trim();
+    const obj={n:v("f_n"),u:v("f_u"),d:v("f_d")};
+    if(el.dataset.id)Object.assign(S.sources.find(s=>s.id===el.dataset.id),obj);
+    else S.sources.push(Object.assign({id:uid()},obj));
+    save(true);closeSheet();renderAll();toast("已保存");return;
+  }
+  if(el.id==="f_save_strategy"){
+    const v=id=>document.getElementById(id).value.trim();
+    localStorage.setItem("wb_qiuzhao_strategy_v1",JSON.stringify({dir:v("f_dir"),alt:v("f_alt"),city:v("f_city"),src:v("f_src")}));
+    closeSheet();renderStrategy();toast("已保存");return;
+  }
+  if(el.id==="f_save_todo"){
+    const v=id=>document.getElementById(id).value.trim();
+    const obj={p:v("f_p"),t:v("f_t"),d:v("f_d"),w:v("f_w")};
+    if(el.dataset.id)Object.assign(S.todos.find(t=>t.id===el.dataset.id),obj);
+    else S.todos.push(Object.assign({id:uid(),done:false},obj));
+    save(true);closeSheet();renderAll();toast("已保存");return;
+  }
+  if(el.id==="f_save_gap"){
+    const g=document.getElementById("f_g").value.trim();
+    if(g){S.gaps.push(g);save(true);renderAll();toast("已添加")}
+    closeSheet();return;
+  }
+  if(el.id==="f_save_resume"){
+    const name=document.getElementById("f_rname").value.trim();
+    const link=document.getElementById("f_rlink").value.trim();
+    const tags=document.getElementById("f_rtags").value.trim();
+    const date=document.getElementById("f_rdate").value.trim()||TODAY;
+    const content=document.getElementById("f_rcontent").value;
+    const delFile=document.getElementById("f_filedel")&&document.getElementById("f_filedel").checked;
+    if(!name&&!link&&!content.trim()&&!pendingResumeFile&&!S.resumes.find(x=>x.id===el.dataset.rid)){toast("请至少填写名称，或上传一份文件");return;}
+    if(pendingResumeFile){
+      const up=cloudOn()?await uploadResumeFile(pendingResumeFile):null;
+      if(up){pendingResumeFile.fileId=up.fileId;pendingResumeFile.name=up.name;pendingResumeFile.size=up.size;pendingResumeFile.type=up.type;pendingResumeFile.data=null;}
+    }
+    const rid=el.dataset.rid;
+    if(rid){
+      const r=S.resumes.find(x=>x.id===rid);
+      if(r){
+        r.name=name;r.link=link;r.tags=tags;r.date=date;r.content=content;
+        if(delFile)r.file=null;
+        else{
+          if(!pendingResumeFile&&r.file&&r.file.data&&!r.file.fileId)pendingResumeFile=r.file;
+          if(pendingResumeFile)r.file=pendingResumeFile;
+        }
+      }
+    }else{
+      S.resumes.push({id:uid(),name,link,tags,date,content,file:pendingResumeFile});
+    }
+    pendingResumeFile=null;
+    save(true);closeSheet();renderAll();toast(rid?"已更新":"已添加");return;
+  }
+});
+/* 阶段下拉直接改 */
+document.addEventListener("change",e=>{
+  const sel=e.target.closest("select.stageSel");if(!sel)return;
+  const a=S.apps.find(x=>x.id===sel.dataset.stage);if(!a)return;
+  const st=sel.value;
+  if(TERMINALS.includes(st)){a.terminal=st}else{a.terminal=null;a.stage=st}
+  a.upd=TODAY;a.history=a.history||[];a.history.push({d:TODAY,stage:st,note:"阶段更新"});
+  save();renderAll();toast("已更新为「"+st+"」");
+});
+
+/* ================= 拖拽改阶段（桌面端） ================= */
+document.addEventListener("dragstart",e=>{
+  const c=e.target.closest&&e.target.closest("[data-drag-app]");
+  if(!c)return;
+  try{e.dataTransfer.setData("text/plain",c.dataset.dragApp);e.dataTransfer.effectAllowed="move";}catch(err){}
+});
+document.addEventListener("dragover",e=>{
+  const t=e.target.closest&&e.target.closest("[data-drop-app]");
+  if(!t)return;
+  e.preventDefault();
+  if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+  t.style.boxShadow="0 0 0 2px var(--blue)";
+  t.style.borderRadius="12px";
+});
+document.addEventListener("dragleave",e=>{
+  const t=e.target.closest&&e.target.closest("[data-drop-app]");
+  if(t)t.style.boxShadow="";
+});
+document.addEventListener("drop",e=>{
+  const t=e.target.closest&&e.target.closest("[data-drop-app]");
+  if(!t)return;
+  e.preventDefault();
+  const id=e.dataTransfer.getData("text/plain");
+  const a=S.apps.find(x=>x.id===id);
+  if(!a||a.id!==t.dataset.dropApp)return;
+  const st=t.dataset.dropStage;
+  a.terminal=null;a.stage=st;a.upd=TODAY;
+  a.history=a.history||[];a.history.push({d:TODAY,stage:st,note:"拖拽推进"});
+  save(true);renderAll();toast("已推进到「"+st+"」");
+});
+
+/* ================= 顶栏按钮 ================= */
+$("#btnAddApp").addEventListener("click",()=>appForm());
+$("#btnDemo").addEventListener("click",()=>{
+  if(S.apps.length&&!confirm("将用示例数据覆盖当前内容（用于查看各字段的填写效果），继续？"))return;
+  S=JSON.parse(JSON.stringify(DEMO));
+  S.profile=S.profile||JSON.parse(JSON.stringify(BLANK.profile));
+  ["mt","todos","apps","resumes","recs","sources","gaps"].forEach(k=>{ if(!S[k]) S[k]=JSON.parse(JSON.stringify(BLANK[k])); });
+  save();renderAll();toast("已载入示例数据");
+});
+$("#btnExport").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="秋招工作台备份_"+TODAY+".json";a.click();URL.revokeObjectURL(a.href);toast("已导出备份");
+});
+$("#btnICS").addEventListener("click",exportICS);
+$("#btnBulk").addEventListener("click",bulkImportForm);
+$("#btnMore").addEventListener("click",moreForm);
+$("#fileImport").addEventListener("change",e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const d=JSON.parse(rd.result);
+    if(d&&Array.isArray(d.apps)){
+      const doMerge=confirm("导入方式：\n\n确定 = 合并（保留现有记录，去重后追加）\n取消 = 覆盖（清空现有数据后导入）\n\n建议先「导出备份」。");
+      if(doMerge){S=mergeData(S,d);}else{S=d;}
+      ["mt","todos","apps","resumes","recs","sources","gaps","profile"].forEach(k=>{ if(!S[k]) S[k]=JSON.parse(JSON.stringify(BLANK[k])); });
+      S.applied=undefined;
+      save();renderAll();
+      toast((doMerge?"已合并导入，共 ":"已覆盖导入，共 ")+d.apps.length+" 笔投递");
+    }else alert("文件格式不正确");
+  }catch(err){alert("JSON 解析失败："+err.message)}};
+  rd.readAsText(f);e.target.value="";
+});
+$("#btnReset").addEventListener("click",()=>{
+  if(!confirm("确定清空全部数据、回到空模板？此操作不可撤销（建议先导出备份）"))return;
+  if(!confirm("再次确认：将删除本机全部填写内容。继续？"))return;
+  S=JSON.parse(JSON.stringify(BLANK));save();renderAll();toast("已恢复空模板");
+});
+/* 云端同步配置 */
+function cloudForm(){
+  const cfg=CLOUD||{};
+  openSheet(`<h3>云端同步设置<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div style="font-size:13px;color:var(--ink2);margin-bottom:10px">模板默认不使用任何云端服务。若要在手机与电脑之间同步，请先自行准备一个后端接口（云函数、NAS、私有服务器均可），再在这里填入地址与令牌。</div>
+  <div class="f-row"><label>云端地址（URL）</label><input id="c_ep" value="${esc(cfg.endpoint||"")}" placeholder="https://你的云端接口地址"></div>
+  <div class="f-row"><label>访问令牌（token）</label><input id="c_tk" value="${esc(cfg.token||"")}" placeholder="云端接口分配的令牌"></div>
+  <div style="font-size:12px;color:var(--ink3);margin:6px 0 10px">接口约定：GET 拉取全量 JSON，POST 写入全量 JSON（query 参数带 token）。当前状态：<b id="c_state">${cloudOn()?(_cloudState==="error"?"⚠ 上次同步失败":"✓ 已同步"):"未启用"}</b></div>
+  <div class="btnrow" style="margin-bottom:10px">
+    <button class="btn" id="c_push">立即上传到云端</button>
+    <button class="btn" id="c_pull">从云端拉取</button>
+  </div>
+  <div style="font-size:12px;color:var(--ink2);background:var(--purple-soft);padding:8px 10px;border-radius:10px;margin-bottom:12px">两端以<b>最后修改</b>为准；本机数据完整时不会被云端旧数据覆盖。</div>
+  <div class="btnrow">
+    <button class="btn" onclick="closeSheet()">取消</button>
+    <button class="btn danger" id="c_disc">${cloudOn()?"断开云端":"清除配置"}</button>
+    <button class="btn primary" id="c_save">保存并测试</button>
+  </div>`);
+}
+$("#btnCloud").addEventListener("click",cloudForm);
+document.addEventListener("click",async e=>{
+  if(e.target.id==="c_save"){
+    const ep=$("#c_ep").value.trim(),tk=$("#c_tk").value.trim();
+    if(!ep||!tk){alert("请同时填写云端地址和令牌");return}
+    CLOUD={endpoint:ep,token:tk};localStorage.setItem(CLOUD_KEY,JSON.stringify(CLOUD));refreshCloudBadge();
+    toast("正在测试连接…");
+    const ok=await loadCloud();
+    closeSheet();renderAll();refreshCloudBadge();
+    toast(ok?"已连云端，已拉取最新数据":"连接失败，请检查地址/令牌是否可访问");
+  }
+  if(e.target.id==="c_disc"){
+    CLOUD=null;localStorage.removeItem(CLOUD_KEY);refreshCloudBadge();closeSheet();renderAll();toast("已断开云端");
+  }
+  if(e.target.id==="c_push"){
+    toast("正在上传…");const ok=await saveCloud(false);closeSheet();renderAll();
+    toast(ok?"已上传到云端 ✓":"上传失败，请检查网络后重试");
+  }
+  if(e.target.id==="c_pull"){
+    toast("正在从云端拉取…");const ok=await loadCloud(true);closeSheet();renderAll();refreshCloudBadge();
+    toast(ok?"已从云端拉取最新数据 ✓":"拉取失败，请检查网络");
+  }
+});
+
+/* ================= PWA：动态生成 manifest，支持安装到手机桌面 ================= */
+(function setupPWA(){
+  try{
+    const mk=(size)=>{
+      const c=document.createElement("canvas");c.width=c.height=size;const x=c.getContext("2d");
+      const g=x.createLinearGradient(0,0,size,size);g.addColorStop(0,"#0a84ff");g.addColorStop(1,"#5e5ce6");
+      x.fillStyle=g;x.beginPath();
+      const r=size*0.22;
+      if(x.roundRect)x.roundRect(0,0,size,size,r);else x.rect(0,0,size,size);
+      x.fill();
+      x.fillStyle="#fff";x.font="700 "+(size*0.52)+"px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+      x.textAlign="center";x.textBaseline="middle";
+      x.fillText("秋",size/2,size/2+size*0.03);
+      return c.toDataURL("image/png");
+    };
+    let icons=[];
+    try{icons=[{src:mk(192),sizes:"192x192",type:"image/png"},{src:mk(512),sizes:"512x512",type:"image/png"}];}catch(e){}
+    const manifest={name:"秋招工作台",short_name:"秋招工作台",description:"单文件秋招求职管理看板：投递、管道、目标、Offer、待办、简历版本",
+      start_url:location.href.split("#")[0],display:"standalone",background_color:"#f5f5f7",theme_color:"#0a84ff",
+      icons:icons};
+    const l=document.createElement("link");
+    l.rel="manifest";
+    l.href="data:application/manifest+json,"+encodeURIComponent(JSON.stringify(manifest));
+    document.head.appendChild(l);
+  }catch(e){}
+})();
+
+/* ================= AI 助手（大模型自动填表） ================= */
+const LLM_KEY="wb_qiuzhao_llm";
+const LLM_MODELS=[
+  {id:"deepseek", name:"DeepSeek", base:"https://api.deepseek.com/v1", model:"deepseek-chat", cors:true, hint:""},
+  {id:"qwen",     name:"通义千问", base:"https://dashscope.aliyuncs.com/compatible-mode/v1", model:"qwen-plus", cors:true, hint:""},
+  {id:"zhipu",    name:"智谱 GLM", base:"https://open.bigmodel.cn/api/paas/v4", model:"glm-4-flash", cors:true, hint:""},
+  {id:"moonshot", name:"Moonshot Kimi", base:"https://api.moonshot.cn/v1", model:"moonshot-v1-8k", cors:true, hint:""},
+  {id:"openai",   name:"OpenAI", base:"https://api.openai.com/v1", model:"gpt-4o-mini", cors:false, hint:"官方不支持浏览器直连，请填中转地址"},
+  {id:"custom",   name:"自定义", base:"", model:"", cors:true, hint:"填入任意 OpenAI 兼容接口地址"}
+];
+let LLM_CFG=null;
+try{const c=JSON.parse(localStorage.getItem(LLM_KEY)||"null");if(c&&c.base&&c.key)LLM_CFG=c;}catch(e){LLM_CFG=null}
+let aiChat=[];          // 会话消息 [{role,content}]
+let aiPending=null;     // 待确认的工具调用 [{name,args,label}]
+let aiAbort=null;       // AbortController，用于中断
+let aiBusy=false;       // 请求进行中
+let aiLastInput="";     // 上次发送的文本，供重试
+let aiCtx=null;         // 面板上下文类型：'screen' | 'offer' | null
+let aiPendingDoc=null;  // 待发送的 Markdown 文档 {name,size,text}
+
+function aiSaveCfg(){try{localStorage.setItem(LLM_KEY,JSON.stringify(LLM_CFG))}catch(e){}}
+function aiReady(){return !!(LLM_CFG&&LLM_CFG.base&&LLM_CFG.key&&LLM_CFG.model)}
+
+/* 会话历史持久化（刷新后保留多轮上下文） */
+function aiSaveChat(){try{localStorage.setItem("wb_qiuzhao_aichat",JSON.stringify(aiChat.slice(-40)))}catch(e){}}
+function aiLoadChat(){try{const c=JSON.parse(localStorage.getItem("wb_qiuzhao_aichat")||"[]");if(Array.isArray(c))aiChat=c.filter(m=>m&&m.role&&(m.content||m.tool_calls));}catch(e){aiChat=[]}}
+function aiClearChat(){aiChat=[];try{localStorage.removeItem("wb_qiuzhao_aichat")}catch(e){}}
+
+/* 工具定义（function calling） */
+const AI_TOOLS=[
+  {type:"function",function:{name:"add_application",description:"新增一条投递记录",
+    parameters:{type:"object",properties:{
+      co:{type:"string",description:"公司全称"},ti:{type:"string",description:"岗位名称"},
+      nat:{type:"string",description:"性质，如校招/实习/社招"},date:{type:"string",description:"投递日期 YYYY-MM-DD"},
+      ch:{type:"string",description:"渠道，如官网/内推/校招平台"},url:{type:"string",description:"官网链接"},
+      stage:{type:"string",enum:["已投递","筛选中","AI面试","笔试","复试","终试","Offer"],description:"当前阶段"},
+      note:{type:"string",description:"备注"}
+    },required:["co","ti"]}}},
+  {type:"function",function:{name:"add_interview",description:"给某公司某岗位添加一条面试记录",
+    parameters:{type:"object",properties:{
+      co:{type:"string",description:"公司名（需与投递记录匹配，找不到则新建投递）"},ti:{type:"string",description:"岗位名"},
+      round:{type:"string",description:"轮次，如一面/二面/HR面/终面"},date:{type:"string",description:"面试日期 YYYY-MM-DD"},
+      form:{type:"string",description:"形式，如电话/视频/现场/群面"},
+      questions:{type:"string",description:"被问到的问题，一行一题"},
+      review:{type:"string",description:"复盘：答得怎么样、下次怎么改"}
+    },required:["co","round"]}}},
+  {type:"function",function:{name:"set_offer",description:"设置某公司某岗位的 Offer 待遇",
+    parameters:{type:"object",properties:{
+      co:{type:"string",description:"公司名"},ti:{type:"string",description:"岗位名"},
+      structure:{type:"string",description:"薪资结构"},monthly:{type:"string",description:"月薪资构成"},
+      months:{type:"string",description:"几薪制"},social:{type:"string",description:"五险一金缴纳比例/基数"},
+      probation:{type:"string",description:"试用期天数"},location:{type:"string",description:"工作地点"},
+      worktime:{type:"string",description:"工作时间安排"},holiday:{type:"string",description:"节假日情况"},
+      benefits:{type:"string",description:"其他福利补贴"}
+    },required:["co"]}}},
+  {type:"function",function:{name:"add_target",description:"新增一条目标岗位",
+    parameters:{type:"object",properties:{
+      p:{type:"string",enum:["P0","P1","P2","P3"],description:"优先级"},co:{type:"string",description:"公司/项目"},
+      dir:{type:"string",description:"方向"},major:{type:"string",description:"专业要求"},
+      city:{type:"string",description:"城市"},time:{type:"string",description:"网申时间文字"},
+      dl:{type:"string",description:"截止日期 YYYY-MM-DD"},act:{type:"string",description:"匹配点与行动"}
+    },required:["co"]}}},
+  {type:"function",function:{name:"add_todo",description:"新增一条待办",
+    parameters:{type:"object",properties:{
+      p:{type:"string",enum:["P0","P1","P2","P3"],description:"优先级"},t:{type:"string",description:"事项"},
+      d:{type:"string",description:"详情"},w:{type:"string",description:"时间窗"}
+    },required:["t"]}}},
+  {type:"function",function:{name:"set_profile",description:"更新个人档案",
+    parameters:{type:"object",properties:{
+      name:{type:"string"},school:{type:"string"},major:{type:"string"},degree:{type:"string"},target:{type:"string"}
+    }}}},
+  {type:"function",function:{name:"list_data",description:"查询当前已记录的数据（投递数、Offer、待办、目标等）",
+    parameters:{type:"object",properties:{}}}}
+];
+
+/* 工具执行器：只产出「待确认项」，不直接落盘 */
+function aiRunTool(name,args){
+  switch(name){
+    case "add_application": return {label:"新增投递「"+args.co+" · "+(args.ti||"")+"」", apply:()=>{S.apps.push({id:uid(),co:args.co||"未命名公司",ti:args.ti||"未命名岗位",nat:args.nat||"校招",date:args.date||TODAY,ch:args.ch||"",url:args.url||"",stage:args.stage||"已投递",terminal:null,note:args.note||"AI 录入",upd:TODAY,history:[{d:TODAY,stage:args.stage||"已投递",note:"AI 录入"}]});}};
+    case "add_interview": {
+      return {label:"添加面试记录「"+args.co+" · "+args.round+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.interviews=a.interviews||[];a.interviews.push({round:args.round||"面试",date:args.date||TODAY,form:args.form||"",questions:args.questions||"",review:args.review||""});}};
+    }
+    case "set_offer": {
+      const off={structure:args.structure||"",monthly:args.monthly||"",months:args.months||"",social:args.social||"",probation:args.probation||"",location:args.location||"",worktime:args.worktime||"",holiday:args.holiday||"",benefits:args.benefits||""};
+      return {label:"设置 Offer 待遇「"+args.co+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.offer=off;}};
+    }
+    case "add_target": return {label:"新增目标岗位「"+args.co+"」", apply:()=>{S.mt.push({id:uid(),p:args.p||"P2",co:args.co,dir:args.dir||"",major:args.major||"不限专业",city:args.city||"",time:args.time||"",dl:args.dl||"",act:args.act||""});}};
+    case "add_todo": return {label:"新增待办「"+args.t+"」", apply:()=>{S.todos.push({id:uid(),p:args.p||"P2",t:args.t,d:args.d||"",w:args.w||"",done:false});}};
+    case "set_profile": return {label:"更新个人档案", apply:()=>{const p=S.profile||{};Object.keys(args).forEach(k=>{if(args[k])p[k]=args[k]});S.profile=p;}};
+    case "list_data": {
+      const txt="当前记录：投递 "+S.apps.length+" 笔"+(S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length?"（Offer "+S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length+" 个）":"")+"；目标岗位 "+S.mt.length+" 个；待办 "+S.todos.filter(t=>!t.done).length+" 条未完成。";
+      return {label:"查询数据", apply:null, reply:txt};
+    }
+    default: return {label:name, apply:null};
+  }
+}
+function aiFindApp(co,ti){
+  co=(co||"").trim();
+  if(!co)return null;
+  // 精确或包含匹配，优先级：公司+岗位 > 公司 > 无
+  return S.apps.find(a=>(a.co||"").indexOf(co)>=0 && (!ti||(a.ti||"").indexOf(ti)>=0))
+      || S.apps.find(a=>(a.co||"").indexOf(co)>=0 || co.indexOf(a.co||"")>=0)
+      || null;
+}
+function aiMakeApp(co,ti){
+  const exist=aiFindApp(co,ti);
+  if(exist)return exist;
+  const a={id:uid(),co:co||"未命名公司",ti:ti||"未命名岗位",nat:"校招",date:TODAY,ch:"",url:"",stage:"已投递",terminal:null,note:"AI 录入",upd:TODAY,history:[{d:TODAY,stage:"已投递",note:"AI 录入"}]};
+  S.apps.push(a);return a;
+}
+
+/* 聊天 UI */
+function aiOpen(){
+  if(!LLM_CFG){aiSetupForm();}
+  $("#aiOverlay").classList.add("on");
+  $("#aiCfg").textContent=aiReady()?((LLM_CFG.name||"模型")+" · "+LLM_CFG.model):"未配置";
+  aiLoadChat();
+  aiRenderHistory();
+  aiRenderDoc();
+  if(!aiChat.length)aiBotMsg("你好，我是你的秋招助手。直接把面试经历、Offer 待遇或求职安排发给我，我会帮你整理进对应的板块。写入前会先让你确认。");
+}
+function aiClose(){$("#aiOverlay").classList.remove("on")}
+function aiRenderHistory(){
+  const b=$("#aiBody");b.innerHTML="";
+  aiChat.forEach(m=>{
+    if(m.role==="user")b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(m.content||"")}</div>`);
+    else if(m.role==="assistant"&&m.content)b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(m.content)}</div>`);
+  });
+  b.scrollTop=b.scrollHeight;
+}
+function aiUserMsg(t){const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(t)}</div>`);b.scrollTop=b.scrollHeight}
+function aiBotMsg(t){const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(t)}</div>`);b.scrollTop=b.scrollHeight}
+function aiErrMsg(t){const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg err">${esc(t)}</div>`);b.scrollTop=b.scrollHeight}
+/* 流式输出：追加到同一个 bot 气泡 */
+function aiStreamStart(){const b=$("#aiBody");const id="st"+Date.now();b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot" id="${id}"></div>`);b.scrollTop=b.scrollHeight;return id}
+function aiStreamAppend(id,t){const el=document.getElementById(id);if(!el)return;const nd=document.createTextNode(t);el.appendChild(nd);const b=$("#aiBody");b.scrollTop=b.scrollHeight}
+function aiTyping(){const b=$("#aiBody");const id="ty"+Date.now();b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot" id="${id}"><span class="ai-typing"><i></i><i></i><i></i></span></div>`);b.scrollTop=b.scrollHeight;return ()=>{const el=document.getElementById(id);if(el)el.remove()}}
+function aiRenderPending(){
+  const b=$("#aiBody");
+  if(!aiPending||!aiPending.length)return;
+  const items=aiPending.map((p,i)=>`<label class="pv"><input type="checkbox" data-ai-p="${i}" checked> ${esc(p.label)}</label>`).join("");
+  b.insertAdjacentHTML("beforeend",`<div class="ai-preview"><div class="pt">AI 解析出以下内容，勾选后点「确认写入」：</div>${items}<div class="btnrow" style="margin-top:10px"><button class="btn" id="aiCancelW">全部放弃</button><button class="btn primary" id="aiConfirmW">确认写入</button></div></div>`);
+  b.scrollTop=b.scrollHeight;
+}
+function aiConfirmWrite(){
+  const b=$("#aiBody");
+  if(!aiPending)return;
+  const picks=aiPending.filter((p,i)=>{const c=b.querySelector(`[data-ai-p="${i}"]`);return c&&c.checked});
+  let wrote=0;
+  picks.forEach(p=>{if(p.apply){p.apply();wrote++;}});
+  aiPending=null;
+  if(wrote){save(true);renderAll();aiBotMsg("已写入 "+wrote+" 条记录，对应板块已更新。"+wrote+" 处");}
+  else aiBotMsg("未写入任何内容。");
+}
+function aiSetupForm(){
+  const cfg=LLM_CFG||{id:"deepseek",base:"",key:"",model:""};
+  openSheet(`<h3>AI 助手设置<button class="x" onclick="closeSheet()">✕</button></h3>
+  <div class="small" style="margin-bottom:10px">选择模型厂商并填入 API Key。Key 仅存本机浏览器、直连模型厂商，不经过任何第三方服务器。</div>
+  <div class="f-row"><label>模型厂商</label><select id="ai_provider">${LLM_MODELS.map(m=>`<option value="${m.id}" ${m.id===cfg.id?"selected":""}>${m.name}</option>`).join("")}</select></div>
+  <div class="f-row"><label>接口地址（Base URL）</label><input id="ai_base" value="${esc(cfg.base||"")}" placeholder="https://…"></div>
+  <div class="f-row"><label>API Key</label><input id="ai_key" type="password" value="${esc(cfg.key||"")}" placeholder="sk-…"></div>
+  <div class="f-row"><label>模型名</label><input id="ai_model" value="${esc(cfg.model||"")}" placeholder="如 deepseek-chat"></div>
+  <div class="small" id="ai_hint" style="margin-bottom:6px"></div>
+  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_ai">保存</button></div>`);
+  const sync=()=>{const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);if(m&&!$("#ai_base").value){$("#ai_base").value=m.base}$("#ai_model").placeholder=m&&m.model?("如 "+m.model):"模型名";$("#ai_hint").textContent=m?(m.hint||(m.cors?"":"该厂商支持浏览器直连")):"";if(m&&m.model&&!$("#ai_model").value)$("#ai_model").value=m.model};
+  $("#ai_provider").addEventListener("change",sync);sync();
+  _sheetSnap=sheetSnapshot(); // 自动填充完成后重拍快照，避免触发「未保存」误判
+}
+
+const AI_SYSTEM=`你是「一页秋招」求职管理工具的助手。用户会口述面试经历、Offer 待遇、投递安排等，你要调用 tools 把这些信息结构化并写入对应板块。原则：1) 能写成结构化数据的就调用工具，不要只回复文字；2) 字段缺失就用空或合理默认，不要编造；3) 阶段值只能用枚举里的；4) 面试问题按题拆成多行；5) 如果只是问答，用 list_data 查询后回答。6) 当用户发送一段 Markdown 文档时，要逐条解析文档里的秋招信息，尽可能多地调用工具导入对应板块（一条投递调一次 add_application、一轮面试调一次 add_interview、一个 Offer 调一次 set_offer），不要只做总结概括。`;
+/* 动态 system：注入现有公司/岗位清单，让 AI 优先匹配已有记录而非重复新建 */
+function aiSystemPrompt(){
+  let extra="";
+  if(S.apps.length){
+    const list=S.apps.slice(0,30).map(a=>a.co+(a.ti?"（"+a.ti+"）":"")).join("、");
+    extra="\n\n用户已记录的投递公司/岗位有："+list+"。当你需要给已有公司添加面试、Offer、更新阶段时，co 字段尽量用与上面一致的名称，不要另起一个相似的新公司名。";
+  }
+  const ctx=aiCtxData();
+  if(ctx)extra+="\n\n当前用户正在查看的页面数据如下，请优先基于这份数据回答或分析：\n"+ctx;
+  return AI_SYSTEM+extra;
+}
+/* 生成当前面板数据摘要（供 AI 分析） */
+function aiCtxData(){
+  if(aiCtx==="screen"){
+    if(!S.mt.length)return "";
+    return "【目标岗位清单】\n"+S.mt.slice(0,20).map(m=>{
+      const days=(m.dl?Math.round((Date.parse(m.dl)-Date.parse(TODAY))/86400000):null);
+      return m.p+" "+m.co+(m.dir?" · "+m.dir:"")+(m.city?"（"+m.city+"）":"")+(days!=null?(days<=0?" · 已截止":" · 剩 "+days+" 天"):"");
+    }).join("\n");
+  }
+  if(aiCtx==="offer"){
+    const offs=S.apps.filter(a=>!a.terminal&&a.stage==="Offer");
+    if(!offs.length)return "";
+    return "【Offer 对比数据】\n"+offs.slice(0,10).map(a=>{
+      const o=a.offer||{};
+      return a.co+(a.ti?" · "+a.ti:"")+"："+["月薪 "+o.monthly,"几薪 "+o.months,"五险一金 "+o.social,"试用期 "+o.probation,"地点 "+o.location,"工时 "+o.worktime,"福利 "+o.benefits].filter(x=>x&&x.indexOf("undefined")<0&&x.split(" ").length>1).join("；");
+    }).join("\n");
+  }
+  return "";
+}
+
+/* 防御性清理：保证历史里 tool_calls 与 tool 消息成对，剔除残缺记录 */
+function aiSanitizeChat(){
+  // 从后往前找，若最后一条是含 tool_calls 的 assistant 且其后无对应 tool 消息，则视为残缺
+  const arr=aiChat;
+  // 找到最后一个含 tool_calls 的 assistant 消息
+  let lastTc=-1;
+  for(let i=arr.length-1;i>=0;i--){if(arr[i].role==="assistant"&&arr[i].tool_calls&&arr[i].tool_calls.length){lastTc=i;break;}}
+  if(lastTc<0)return;
+  // 统计其后是否有 tool 消息回填（tool_call_id 覆盖）
+  const ids=new Set(arr[lastTc].tool_calls.map(t=>t.id));
+  let hasTool=false;
+  for(let i=lastTc+1;i<arr.length;i++){if(arr[i].role==="tool"&&ids.has(arr[i].tool_call_id)){hasTool=true;break;}}
+  if(!hasTool){
+    // 残缺：截断到 lastTc 之前
+    aiChat=arr.slice(0,lastTc);
+    aiSaveChat();
+  }
+}
+
+/* 请求模型：流式输出 + 支持中断；工具调用阶段用非流式 */
+async function aiCall(){
+  if(aiBusy){aiErrMsg("正在处理上一条，请稍候。");return;}
+  if(!aiReady()){aiErrMsg("请先点「设置」配置模型与 API Key");return;}
+  aiSanitizeChat();
+  // 文档优先：有已载入的 Markdown 文档则发文档
+  let text="";
+  if(aiPendingDoc){
+    const doc=aiPendingDoc;
+    if(doc.text.length>100*1024){aiErrMsg("文档过大（超 100KB），请分段导入。");return;}
+    text="请解析下面这份 Markdown 文档，把其中的秋招信息逐条导入对应板块：\n\n"+doc.text;
+    aiUserMsg("📄 "+doc.name+"（已发送，等待解析导入）");
+    aiClearDoc();
+  }else{
+    text=$("#aiInput").value.trim();if(!text)return;
+    aiUserMsg(text);$("#aiInput").value="";
+  }
+  aiLastInput=text;
+  aiChat.push({role:"user",content:text});
+  aiSaveChat();
+  aiBusy=true;aiAbort=new AbortController();
+  $("#aiSend").disabled=true;$("#aiSend").textContent="停止";
+  const done=aiTyping();
+  try{
+    const url=LLM_CFG.base.replace(/\/$/,"")+"/chat/completions";
+    const sys=aiSystemPrompt();
+    // 第一段：非流式，稳妥拿 tool_calls
+    const r=await fetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+      body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false})});
+    if(!r.ok){const j=await r.json().catch(()=>({}));const msg=(j.error&&j.error.message)||("HTTP "+r.status);throw new Error(msg);}
+    const j=await r.json();
+    const msg=j.choices&&j.choices[0]&&j.choices[0].message;
+    if(!msg)throw new Error("响应格式异常");
+    aiChat.push(msg);aiSaveChat();
+    const toolCalls=(msg.tool_calls||[]).filter(t=>t.type==="function");
+    if(toolCalls.length){
+      const pending=[];
+      toolCalls.forEach(tc=>{
+        let args={};try{args=JSON.parse(tc.function.arguments||"{}")}catch(e){args={}}
+        const res=aiRunTool(tc.function.name,args);
+        if(res.apply||res.reply)pending.push(res);
+      });
+      aiPending=pending.filter(p=>p.apply);
+      const toolMsgs=toolCalls.map(tc=>{
+        let args={};try{args=JSON.parse(tc.function.arguments||"{}")}catch(e){}
+        const res=aiRunTool(tc.function.name,args);
+        return {role:"tool",tool_call_id:tc.id,content:res.reply||"已记录，待用户确认写入"};
+      });
+      // 成对持久化：tool 消息必须紧跟含 tool_calls 的 assistant 消息，保证历史闭环
+      aiChat.push(...toolMsgs);aiSaveChat();
+      aiRenderPending();
+      // 第二段：流式生成确认文案
+      const r2=await fetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+        body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true})});
+      if(r2.ok&&r2.body){
+        await aiReadStream(r2,()=>{const m2={role:"assistant",content:"（已解析，请确认写入）"};aiChat.push(m2);aiSaveChat();});
+      }else{
+        aiBotMsg("已解析出内容，请在下方确认后写入。");
+      }
+    }else if(msg.content){
+      aiBotMsg(msg.content);
+    }else{
+      aiBotMsg("（模型未返回内容）");
+    }
+  }catch(e){
+    if(e.name==="AbortError"){aiBotMsg("（已停止）");}
+    else{
+      const m=String(e.message||e);
+      if(m==="Failed to fetch"||/NetworkError|TypeError/i.test(m))aiErrMsg("请求失败：该厂商可能不支持浏览器直连（CORS），或网络不可用。请换 DeepSeek/通义/智谱等国产模型，或用「自定义」填中转地址。");
+      else aiErrMsg("调用失败："+m);
+      // 失败重试：撤销刚 push 的用户消息，避免重发时重复；把原文放回输入框
+      const last=aiChat[aiChat.length-1];
+      if(last&&last.role==="user")aiChat.pop();
+      aiSaveChat();
+      if(aiLastInput){$("#aiInput").value=aiLastInput;}
+    }
+  }finally{
+    done();aiBusy=false;aiAbort=null;
+    $("#aiSend").disabled=false;$("#aiSend").textContent="发送";
+  }
+}
+/* 读 SSE 流，逐段渲染 */
+async function aiReadStream(res,onEmpty){
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();
+  const sid=aiStreamStart();
+  let acc="";
+  let buf="";
+  try{
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf("\n"))>=0){
+        const ln=buf.slice(0,idx).trim();buf=buf.slice(idx+1);
+        if(!ln.startsWith("data:"))continue;
+        const data=ln.slice(5).trim();if(data==="[DONE]")continue;
+        try{const o=JSON.parse(data);const d=o.choices&&o.choices[0]&&o.choices[0].delta;if(d&&d.content){acc+=d.content;aiStreamAppend(sid,d.content);}}catch(e){}
+      }
+    }
+  }catch(e){}
+  if(!acc)onEmpty();
+  return acc;
+}
+/* 中断：中止当前请求 */
+function aiStop(){if(aiAbort)aiAbort.abort();}
+
+/* 面板入口：设置上下文并打开浮窗 */
+function aiOpenCtx(type){
+  aiCtx=type;
+  const name=type==="screen"?"岗位筛选":(type==="offer"?"Offer 对比":"");
+  aiOpen();
+  const data=aiCtxData();
+  if(data)aiBotMsg("已加载当前「"+name+"」数据，你可以直接问，例如：\n· 哪个目标最该优先投？\n· 这些 Offer 综合来看哪个更划算？");
+  else aiBotMsg("当前「"+name+"」还没有数据，先去填一些再回来问吧。");
+}
+
+/* Markdown 文档：选择文件并读取 */
+function aiFileChange(input){
+  const f=input.files&&input.files[0];
+  if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const text=String(rd.result||"");
+    if(text.length>100*1024){aiErrMsg("文档过大（超 100KB），请分段导入。");input.value="";return;}
+    aiPendingDoc={name:f.name,size:f.size,text:text};
+    aiRenderDoc();
+    aiBotMsg("已载入「"+f.name+"」("+(f.size/1024).toFixed(1)+" KB)。点击「发送」即可让 AI 解析导入。");
+  };
+  rd.onerror=()=>aiErrMsg("读取文件失败");
+  rd.readAsText(f);
+  input.value="";
+}
+function aiClearDoc(){aiPendingDoc=null;aiRenderDoc();}
+function aiRenderDoc(){
+  const area=$("#aiDocArea");
+  if(!area)return;
+  area.innerHTML=aiPendingDoc?`<div class="ai-dochip">📄 ${esc(aiPendingDoc.name)}（${(aiPendingDoc.size/1024).toFixed(1)} KB）<button class="del" data-ai-doc-clear="1">✕</button></div>`:"";
+}
+
+/* 事件绑定 */
+$("#btnAI").addEventListener("click",()=>{aiCtx=null;aiOpen()});
+$("#aiClose").addEventListener("click",aiClose);
+$("#aiClear").addEventListener("click",()=>{if(!confirm("清空当前对话？"))return;aiClearChat();aiRenderHistory();aiBotMsg("对话已清空，重新开始吧。");});
+$("#aiOverlay").addEventListener("click",e=>{if(e.target.id==="aiOverlay")aiClose()});
+$("#aiSetup").addEventListener("click",aiSetupForm);
+$("#aiAttach").addEventListener("click",()=>$("#aiFile").click());
+$("#aiFile").addEventListener("change",e=>aiFileChange(e.target));
+$("#aiSend").addEventListener("click",()=>{if(aiBusy){aiStop();}else{aiCall();}});
+$("#aiInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(aiBusy)aiStop();else aiCall();}});
+document.addEventListener("click",async e=>{
+  if(e.target.id==="f_save_ai"){
+    const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);
+    LLM_CFG={id:id,name:m?m.name:"",base:$("#ai_base").value.trim(),key:$("#ai_key").value.trim(),model:$("#ai_model").value.trim()};
+    aiSaveCfg();closeSheet();
+    $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
+    toast(aiReady()?"AI 助手已配置":"配置不完整");return;
+  }
+  if(e.target.id==="aiConfirmW"){aiConfirmWrite();return;}
+  if(e.target.id==="aiCancelW"){aiPending=null;const b=$("#aiBody");const p=b.querySelector(".ai-preview");if(p)p.remove();aiBotMsg("已放弃本次解析内容。");return;}
+});
+/* 面板 AI 入口 + 文档清除按钮（独立委托） */
+document.addEventListener("click",e=>{
+  const ctxBtn=e.target.closest("[data-ai-ctx]");
+  if(ctxBtn){aiOpenCtx(ctxBtn.dataset.aiCtx);return;}
+  const del=e.target.closest("[data-ai-doc-clear]");
+  if(del){aiClearDoc();return;}
+});
+
+/* ================= 导航 ================= */
+const PANES=[["applied","投递岗位"],["progress","投递进度"],["screen","筛选岗位"],["offer","Offer对比"],["todo","待办事项"],["about","使用说明"]];
+$("#tabs").innerHTML=PANES.map(([k,n],i)=>`<button data-k="${k}" class="${i===0?"on":""}">${n}</button>`).join("");
+function showPane(k){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===k));
+  document.querySelectorAll("section.pane").forEach(p=>p.classList.toggle("on",p.dataset.p===k));
+  try{localStorage.setItem("wb_qiuzhao_tab",k)}catch(e){}
+}
+$("#tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(b)showPane(b.dataset.k)});
+showPane(localStorage.getItem("wb_qiuzhao_tab")||"applied");
+refreshCloudBadge();
+applyGuideState();
+(async()=>{ await loadCloud(); renderAll(); refreshCloudBadge(); applyGuideState(); })();
+</script>
+</body>
+</html>

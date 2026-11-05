@@ -1,0 +1,19 @@
+# ===== 机器产物（不进版本控制） =====
+.workbuddy/
+*.genie
+output/
+
+# ===== 归档（旧版本留档，不进历史） =====
+archive/
+
+# ===== 依赖 =====
+node_modules/
+
+# ===== 构建 / 打包产物（按需重新生成） =====
+秋招云同步后端/qiuzhao-sync.zip
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
+desktop.ini
+秋招云同步后端/
