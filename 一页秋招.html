@@ -278,6 +278,27 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .pv-group-body{padding:4px 12px 8px}
 /* 右侧常驻悬浮 AI 按钮 */
 #aiFab{position:fixed;right:18px;bottom:84px;z-index:94;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#0a84ff,#5e5ce6);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(10,132,255,.35);transition:transform .18s}
+/* AI 配置向导 */
+.wiz-steps{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px}
+.wiz-steps span{font-size:12px;color:var(--ink3);background:var(--gray-soft);padding:5px 10px;border-radius:980px;white-space:nowrap}
+.wiz-steps span.on{background:var(--blue);color:#fff;font-weight:600}
+.wiz-steps span.done{background:var(--green-soft);color:var(--green);font-weight:600}
+.wiz-msg{font-size:13px;line-height:1.6;color:var(--red);min-height:18px;margin:8px 0}
+.wiz-msg.ok{color:var(--green)}
+.wiz-loading{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink2);padding:20px 0}
+.wiz-ok-line{font-size:13px;color:var(--green);font-weight:600;margin-bottom:10px}
+.wiz-search{width:100%;border:none;background:var(--gray-soft);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:8px;outline:none;font-family:inherit;color:var(--ink)}
+.wiz-models{max-height:36vh;overflow-y:auto;border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+.wiz-model{display:flex;align-items:center;gap:9px;padding:11px 12px;font-size:14px;border-bottom:1px solid var(--line);cursor:pointer}
+.wiz-model:last-child{border-bottom:none}
+.wiz-model .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink3);flex:none;transition:.15s}
+.wiz-model.on{background:var(--blue-soft);color:var(--blue);font-weight:600}
+.wiz-model.on .dot{border-color:var(--blue);background:var(--blue)}
+.wiz-empty{padding:16px;text-align:center;color:var(--ink3);font-size:13px}
+.wiz-sum{background:var(--gray-soft);border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px}
+.wiz-sum div{display:flex;gap:10px;padding:3px 0;align-items:flex-start}
+.wiz-sum b{color:var(--ink2);font-weight:600;flex:none;width:42px}
+.wiz-sum span{color:var(--ink);word-break:break-all}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.95)}
 </style>
@@ -2202,40 +2223,184 @@ function aiConfirmWrite(){
   if(wrote){save(true);renderAll();aiBotMsg("已写入 "+wrote+" 条记录，对应板块已更新。");}
   else aiBotMsg("未写入任何内容。");
 }
+/* ===== AI 配置向导（模仿 Obsidian Copilot：填 Key → 测试 → 拉取模型 → 选择 → 保存） ===== */
+let _aiWiz=null;
+const AI_MODEL_BLOCK=/embed|embedding|tts|asr|speech|rerank|ocr|image|video|wanx|audio|cosyvoice|paraformer|sambert/i;
+
+function aiWizPreset(){return LLM_MODELS.find(x=>x.id===_aiWiz.provider)||LLM_MODELS[0]}
+
 function aiSetupForm(){
-  const cfg=LLM_CFG||{id:"deepseek",base:"",key:"",model:""};
-  openSheet(`<h3>AI 助手设置<button class="x" onclick="closeSheet()">✕</button></h3>
-  <div class="small" style="margin-bottom:10px">选择模型厂商并填入 API Key。Key 仅存本机浏览器、直连模型厂商，不经过任何第三方服务器。</div>
-  <div class="f-row"><label>模型厂商</label><select id="ai_provider">${LLM_MODELS.map(m=>`<option value="${m.id}" ${m.id===cfg.id?"selected":""}>${m.name}</option>`).join("")}</select></div>
-  <div class="f-row"><label>接口地址（Base URL）</label><input id="ai_base" value="${esc(cfg.base||"")}" placeholder="https://…"></div>
-  <div class="f-row"><label>API Key</label><input id="ai_key" type="password" value="${esc(cfg.key||"")}" placeholder="sk-…"></div>
-  <div class="f-row"><label>模型名</label><input id="ai_model" value="${esc(cfg.model||"")}" placeholder="如 deepseek-chat"></div>
-  <div class="f-row"><label>响应风格（影响创造力与发散度）</label><select id="ai_style">${AI_STYLES.map(st=>`<option value="${st.id}" ${st.id===aiStyle?"selected":""}>${st.name} — ${st.desc}</option>`).join("")}</select></div>
-  <div class="small" id="ai_hint" style="margin-bottom:6px"></div>
-  <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_ai">保存</button></div>`);
-  const sync=(force)=>{
-    const id=$("#ai_provider").value;
-    const m=LLM_MODELS.find(x=>x.id===id);
-    if(!m)return;
-    const baseEl=$("#ai_base"), modelEl=$("#ai_model");
-    const curBase=baseEl.value.trim(), curModel=modelEl.value.trim();
-    // 当前值是否只是「别的厂商的预设值」；自定义值在打开设置页时保留，不误删
-    const isPresetBase=LLM_MODELS.some(x=>x.base&&x.base===curBase);
-    const isPresetModel=LLM_MODELS.some(x=>x.model&&x.model===curModel);
-    if(id==="custom"){
-      // 自定义：主动切换时清掉预设值让用户自己填；已填的自定义值保留
-      if(force&&isPresetBase)baseEl.value="";
-      if(force&&isPresetModel)modelEl.value="";
-    }else{
-      // 具体厂商：主动切换时强制套用该厂商预设，避免地址/模型残留导致调用失败
-      if(force||!curBase||isPresetBase)baseEl.value=m.base||"";
-      if(force||!curModel||isPresetModel)modelEl.value=m.model||"";
-    }
-    modelEl.placeholder=m.model?("如 "+m.model):"模型名";
-    $("#ai_hint").textContent=m.hint||(m.cors?"支持浏览器直连调用":"可能不支持浏览器直连，请填写中转地址");
+  const cfg=LLM_CFG||{};
+  const provider=cfg.id||"deepseek";
+  const preset=LLM_MODELS.find(x=>x.id===provider)||LLM_MODELS[0];
+  _aiWiz={
+    step:1, provider,
+    base:cfg.base||preset.base||"",
+    key:cfg.key||"",
+    style:aiStyle||"balanced",
+    testing:false, testOk:false, testMsg:"",
+    models:[], picked:"", search:""
   };
-  $("#ai_provider").addEventListener("change",()=>sync(true));sync(false);
-  _sheetSnap=sheetSnapshot(); // 自动填充完成后重拍快照，避免触发「未保存」误判
+  _aiWiz.lastModel=cfg.model||"";
+  aiWizRender();
+}
+
+function aiWizSteps(){
+  const names=["填写信息","测试连接","选择模型","保存启用"];
+  const cur=_aiWiz.step;
+  return `<div class="wiz-steps">${names.map((n,i)=>{
+    const idx=i+1;
+    const cls=idx<cur?"done":(idx===cur?"on":"");
+    return `<span class="${cls}">${idx<cur?"✓":idx} ${n}</span>`;
+  }).join("")}</div>`;
+}
+
+function aiWizRender(){
+  const w=_aiWiz, p=aiWizPreset();
+  let body="";
+  if(w.step===1){
+    body=`
+    <div class="f-row"><label>模型厂商</label><select id="w_provider">${LLM_MODELS.map(m=>`<option value="${m.id}" ${m.id===w.provider?"selected":""}>${m.name}</option>`).join("")}</select></div>
+    <div class="f-row"><label>接口地址（Base URL）</label><input id="w_base" value="${esc(w.base)}" placeholder="https://…"></div>
+    <div class="f-row"><label>API Key</label><input id="w_key" type="password" value="${esc(w.key)}" placeholder="sk-…"></div>
+    <div class="small" style="margin:-2px 0 2px">${esc(p.hint||(p.cors?"支持浏览器直连调用":"可能不支持浏览器直连，请填写中转地址"))}</div>
+    <div class="wiz-msg" id="w_msg">${esc(w.testMsg||"")}</div>
+    <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="w_test">测试连接</button></div>`;
+  }else if(w.step===2){
+    body=w.testing
+      ? `<div class="wiz-loading"><span class="ai-typing"><i></i><i></i><i></i></span> 正在测试连接，并拉取可用模型…</div>`
+      : `<div class="wiz-msg">${esc(w.testMsg||"测试未通过")}</div><div class="btnrow"><button class="btn" id="w_back">返回修改</button></div>`;
+  }else if(w.step===3){
+    const list=w.models;
+    body=`
+    <div class="wiz-ok-line">✓ 连接成功，可选 ${list.length} 个模型</div>
+    <input id="w_search" class="wiz-search" value="${esc(w.search)}" placeholder="搜索模型，如 qwen-plus">
+    <div class="wiz-models" id="w_models">${list.length?list.map(id=>`<div class="wiz-model ${id===w.picked?"on":""}" data-model="${esc(id)}"><span class="dot"></span>${esc(id)}</div>`).join(""):`<div class="wiz-empty">没有可用模型</div>`}</div>
+    <div class="btnrow"><button class="btn" id="w_back">上一步</button><button class="btn primary" id="w_next" ${w.picked?"":"disabled"} style="${w.picked?"":"opacity:.5;pointer-events:none"}">下一步</button></div>`;
+  }else{
+    const model=w.picked||"";
+    body=`
+    <div class="wiz-ok-line">✓ 配置就绪</div>
+    <div class="wiz-sum">
+      <div><b>厂商</b><span>${esc(p.name)}${(p.base&&p.base!==w.base)?"（自定义地址）":""}</span></div>
+      <div><b>接口</b><span>${esc(w.base)}</span></div>
+      <div><b>模型</b><span>${esc(model)}</span></div>
+    </div>
+    <div class="f-row"><label>响应风格（影响创造力与发散度）</label><select id="w_style">${AI_STYLES.map(st=>`<option value="${st.id}" ${st.id===w.style?"selected":""}>${st.name} — ${st.desc}</option>`).join("")}</select></div>
+    <div class="btnrow"><button class="btn" id="w_back">上一步</button><button class="btn primary" id="w_save">保存并启用</button></div>`;
+  }
+  openSheet(`<h3>AI 设置<button class="x" onclick="closeSheet()">✕</button></h3>${aiWizSteps()}${body}`);
+  aiWizBind();
+}
+
+function aiWizBind(){
+  const w=_aiWiz, el=id=>$("#"+id);
+  if(w.step===1){
+    const sel=el("w_provider"), base=el("w_base"), key=el("w_key");
+    sel.addEventListener("change",()=>{
+      const id=sel.value, m=LLM_MODELS.find(x=>x.id===id)||LLM_MODELS[0];
+      w.provider=id;
+      const cur=base.value.trim();
+      const isPreset=LLM_MODELS.some(x=>x.base&&x.base===cur);
+      // 主动切换厂商：套用该厂商预设地址（自定义则清空让用户填）
+      base.value=(id==="custom")?"":((!cur||isPreset)?(m.base||""):cur);
+      w.base=base.value;
+      w.testOk=false;w.testMsg="";w.models=[];w.picked="";
+      aiWizRender();
+    });
+    base.addEventListener("input",()=>{w.base=base.value;w.testOk=false;});
+    key.addEventListener("input",()=>{w.key=key.value;w.testOk=false;});
+    el("w_test").addEventListener("click",aiWizTest);
+  }else if(w.step===2){
+    const back=el("w_back");
+    if(back)back.addEventListener("click",()=>{w.step=1;w.testing=false;aiWizRender();});
+  }else if(w.step===3){
+    el("w_back").addEventListener("click",()=>{w.step=1;aiWizRender();});
+    const s=el("w_search");
+    s.addEventListener("input",()=>{
+      w.search=s.value;
+      const q=s.value.trim().toLowerCase();
+      document.querySelectorAll("#w_models .wiz-model").forEach(row=>{
+        row.style.display=(!q||(row.dataset.model||"").toLowerCase().indexOf(q)>=0)?"":"none";
+      });
+    });
+    el("w_models").addEventListener("click",e=>{
+      const row=e.target.closest("[data-model]");
+      if(!row)return;
+      w.picked=row.dataset.model;
+      aiWizRender();
+    });
+    el("w_next").addEventListener("click",()=>{ if(!w.picked)return; w.step=4; aiWizRender(); });
+  }else{
+    el("w_back").addEventListener("click",()=>{w.step=3;aiWizRender();});
+    el("w_style").addEventListener("change",e=>{w.style=e.target.value;});
+    el("w_save").addEventListener("click",aiWizSave);
+  }
+  _sheetSnap=sheetSnapshot(); // 每步重拍快照，避免触发「未保存」误判
+}
+
+/* 测试连接：先取 /models（能取到就直接用它的列表），取不到再用最小对话验证一次 */
+async function aiWizTest(){
+  const w=_aiWiz;
+  const base=(w.base||"").trim().replace(/\/+$/,"");
+  const key=(w.key||"").trim();
+  if(!base){w.testMsg="请先填写接口地址";aiWizRender();return;}
+  if(!key){w.testMsg="请先填写 API Key";aiWizRender();return;}
+  w.step=2;w.testing=true;w.testMsg="";w.testOk=false;w.models=[];w.picked="";
+  aiWizRender();
+  const preset=aiWizPreset();
+  let models=[], err="";
+  // 1) 拉模型列表，同时验证 Key
+  try{
+    const r=await fetch(base+"/models",{headers:{"Authorization":"Bearer "+key}});
+    if(r.ok){
+      const j=await r.json().catch(()=>null);
+      const arr=(j&&(j.data||j.models))||[];
+      models=arr.map(x=>x&&(x.id||x.name)).filter(Boolean);
+    }else if(r.status===401||r.status===403){
+      err="API Key 无效或无权限（HTTP "+r.status+"）";
+    }
+  }catch(_){ /* 跨域/网络失败 → 走对话探测 */ }
+  // 2) 取不到列表 → 用默认模型发一次最小请求，确认真的能调通
+  if(!err&&!models.length){
+    try{
+      const r2=await fetch(base+"/chat/completions",{method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+        body:JSON.stringify({model:preset.model,messages:[{role:"user",content:"hi"}],max_tokens:1,stream:false})});
+      if(r2.ok){models=[preset.model];}
+      else{
+        const j2=await r2.json().catch(()=>({}));
+        err=(j2.error&&j2.error.message)||("HTTP "+r2.status);
+      }
+    }catch(e){ err="连接失败："+((e&&e.message)||e); }
+  }
+  if(!err&&!models.length)err="连接成功但未获取到可用模型";
+  w.testing=false;
+  if(err){
+    w.testOk=false;w.testMsg=err;aiWizRender();return;
+  }
+  // 过滤掉非对话类模型（向量/语音/图像等）
+  const chat=models.filter(id=>!AI_MODEL_BLOCK.test(id));
+  w.models=chat.length?chat:models;
+  w.testOk=true;
+  // 仅唯一模型或上次用过的模型才自动选中；多模型须用户自己点选
+  const last=w.lastModel||"";
+  w.picked = w.models.length===1 ? w.models[0] : (w.models.indexOf(last)>=0?last:"");
+  w.step=3;
+  aiWizRender();
+}
+
+function aiWizSave(){
+  const w=_aiWiz, p=aiWizPreset();
+  if(!w.testOk||!w.picked){toast("请先完成测试并选择模型");return;}
+  LLM_CFG={id:w.provider,name:p.name,base:(w.base||"").trim().replace(/\/+$/,""),key:(w.key||"").trim(),model:w.picked};
+  aiStyle=w.style||"balanced";
+  try{localStorage.setItem("wb_qiuzhao_aistyle",aiStyle)}catch(e){}
+  aiSaveCfg();
+  closeSheet(true);   // 已保存，跳过「未保存」二次确认
+  $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
+  toast("AI 已启用："+LLM_CFG.model);
+  aiBotMsg("已连接「"+LLM_CFG.name+" · "+LLM_CFG.model+"」。现在可以直接说你的面试经历或 Offer 待遇了。");
 }
 
 const AI_SYSTEM=`你是「一页秋招」求职管理工具的智能助手，要像一个熟悉秋招的学长/学姐一样主动、贴心、聪明。
@@ -2669,15 +2834,6 @@ $("#aiMic").addEventListener("click",aiToggleMic);
 $("#aiSend").addEventListener("click",()=>{if(aiBusy){aiStop();}else{aiCall();}});
 $("#aiInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(aiBusy)aiStop();else aiCall();}});
 document.addEventListener("click",async e=>{
-  if(e.target.id==="f_save_ai"){
-    const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);
-    LLM_CFG={id:id,name:m?m.name:"",base:$("#ai_base").value.trim(),key:$("#ai_key").value.trim(),model:$("#ai_model").value.trim()};
-    aiStyle=$("#ai_style").value||"balanced";
-    try{localStorage.setItem("wb_qiuzhao_aistyle",aiStyle)}catch(e){}
-    aiSaveCfg();closeSheet();
-    $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
-    toast(aiReady()?"AI 助手已配置":"配置不完整");return;
-  }
   if(e.target.id==="aiConfirmW"){aiConfirmWrite();return;}
   if(e.target.id==="aiCancelW"){aiPending=null;const b=$("#aiBody");const p=b.querySelector(".ai-preview");if(p)p.remove();aiBotMsg("已放弃本次解析内容。");return;}
 });
