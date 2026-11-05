@@ -2199,8 +2199,28 @@ function aiSetupForm(){
   <div class="f-row"><label>响应风格（影响创造力与发散度）</label><select id="ai_style">${AI_STYLES.map(st=>`<option value="${st.id}" ${st.id===aiStyle?"selected":""}>${st.name} — ${st.desc}</option>`).join("")}</select></div>
   <div class="small" id="ai_hint" style="margin-bottom:6px"></div>
   <div class="btnrow"><button class="btn" onclick="closeSheet()">取消</button><button class="btn primary" id="f_save_ai">保存</button></div>`);
-  const sync=()=>{const id=$("#ai_provider").value;const m=LLM_MODELS.find(x=>x.id===id);if(m&&!$("#ai_base").value){$("#ai_base").value=m.base}$("#ai_model").placeholder=m&&m.model?("如 "+m.model):"模型名";$("#ai_hint").textContent=m?(m.hint||(m.cors?"":"该厂商支持浏览器直连")):"";if(m&&m.model&&!$("#ai_model").value)$("#ai_model").value=m.model};
-  $("#ai_provider").addEventListener("change",sync);sync();
+  const sync=(force)=>{
+    const id=$("#ai_provider").value;
+    const m=LLM_MODELS.find(x=>x.id===id);
+    if(!m)return;
+    const baseEl=$("#ai_base"), modelEl=$("#ai_model");
+    const curBase=baseEl.value.trim(), curModel=modelEl.value.trim();
+    // 当前值是否只是「别的厂商的预设值」；自定义值在打开设置页时保留，不误删
+    const isPresetBase=LLM_MODELS.some(x=>x.base&&x.base===curBase);
+    const isPresetModel=LLM_MODELS.some(x=>x.model&&x.model===curModel);
+    if(id==="custom"){
+      // 自定义：主动切换时清掉预设值让用户自己填；已填的自定义值保留
+      if(force&&isPresetBase)baseEl.value="";
+      if(force&&isPresetModel)modelEl.value="";
+    }else{
+      // 具体厂商：主动切换时强制套用该厂商预设，避免地址/模型残留导致调用失败
+      if(force||!curBase||isPresetBase)baseEl.value=m.base||"";
+      if(force||!curModel||isPresetModel)modelEl.value=m.model||"";
+    }
+    modelEl.placeholder=m.model?("如 "+m.model):"模型名";
+    $("#ai_hint").textContent=m.hint||(m.cors?"支持浏览器直连调用":"可能不支持浏览器直连，请填写中转地址");
+  };
+  $("#ai_provider").addEventListener("change",()=>sync(true));sync(false);
   _sheetSnap=sheetSnapshot(); // 自动填充完成后重拍快照，避免触发「未保存」误判
 }
 
