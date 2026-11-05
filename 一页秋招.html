@@ -591,7 +591,10 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
       <li>本地改动后约 1 秒<b>自动上传</b>，失败会自动重试</li>
       <li>发现云端版本更新时，只在状态栏提示「<b>云端有更新</b>」，<b>不会</b>偷偷覆盖本机</li>
       <li>只有你点「拉取云端数据」才会用云端覆盖本机</li>
-      <li>面板里能看到「上次同步时间 / 本机最后修改 / 是否有云端更新」</li>
+      <li>面板里能看到「上次同步时间 / 本机最后修改 / 云端最后修改来自哪台设备」</li>
+      <li>每 <b>60 秒</b>自动检查云端；发现更新时可「<b>查看差异</b>」，选择合并两者 / 用云端覆盖 / 保留本机上传</li>
+      <li>最近 15 条同步记录留在面板里，失败原因一眼可见</li>
+      <li>可填「<b>同步口令</b>」开启端到端加密：上传的是密文，服务端和拿到文件的人都读不懂（多设备必须同一口令）</li>
     </ul>
     <h4>接口约定（自己写后端时照这个来）</h4>
     <ul class="li amber">
@@ -750,6 +753,59 @@ function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e)
 
 /* ===== 云端同步（默认关闭，需使用者自行配置自己的后端） ===== */
 const CLOUD_KEY="wb_qiuzhao_cloud";
+const DEV_KEY="wb_qiuzhao_dev";
+const CLOUD_LOG_KEY="wb_qiuzhao_cloudlog";
+
+/* 设备标识：用来在同步面板显示"最后修改来自哪台设备" */
+function cloudDevice(){
+  try{const j=JSON.parse(localStorage.getItem(DEV_KEY)||"null");if(j&&j.id)return j;}catch(e){}
+  const id="dev_"+Math.random().toString(36).slice(2,8);
+  const mob=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"");
+  const d={id:id,name:(mob?"手机-":"电脑-")+id.slice(4,7).toUpperCase()};
+  try{localStorage.setItem(DEV_KEY,JSON.stringify(d))}catch(e){}
+  return d;
+}
+let _cloudDev=cloudDevice();
+
+/* 同步日志：最近 15 条，出问题能回溯 */
+let _cloudLog=[];
+try{_cloudLog=JSON.parse(localStorage.getItem(CLOUD_LOG_KEY)||"[]")||[];}catch(e){_cloudLog=[];}
+function cloudLog(action,ok,msg){
+  _cloudLog.unshift({t:Date.now(),action:action,ok:!!ok,msg:msg||""});
+  _cloudLog=_cloudLog.slice(0,15);
+  try{localStorage.setItem(CLOUD_LOG_KEY,JSON.stringify(_cloudLog))}catch(e){}
+}
+
+/* 端到端加密（AES-GCM，口令派生密钥；服务器只拿到密文） */
+function b64enc(u8){let s="";const CH=0x8000;for(let i=0;i<u8.length;i+=CH)s+=String.fromCharCode.apply(null,u8.subarray(i,i+CH));return btoa(s);}
+function b64dec(b64){const bin=atob(b64);const u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return u8;}
+async function cloudKey(pass){
+  if(!(window.crypto&&crypto.subtle))throw new Error("当前环境不支持加密（需 Chrome/Edge 打开）");
+  const raw=new TextEncoder().encode("qiuzhao-sync|"+pass);
+  const h=await crypto.subtle.digest("SHA-"+[2,5,6].join(""),raw);
+  return crypto.subtle.importKey("raw",h,"AES-GCM",false,["encrypt","decrypt"]);
+}
+async function encryptState(obj,pass){
+  const key=await cloudKey(pass);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv},key,new TextEncoder().encode(JSON.stringify(obj)));
+  return {enc:1,iv:b64enc(iv),ct:b64enc(new Uint8Array(ct))};
+}
+async function decryptState(o,pass){
+  const key=await cloudKey(pass);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64dec(o.iv)},key,b64dec(o.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* 组装上传信封：数据 + 设备 + 是否加密 */
+async function cloudEnvelope(){
+  const plain=cleanForCloud(S);
+  if(CLOUD&&CLOUD.pass){
+    const enc=await encryptState(plain,CLOUD.pass);
+    return {payload:enc,enc:1,device:_cloudDev,ts:Date.now()};
+  }
+  return {payload:plain,enc:0,device:_cloudDev,ts:Date.now()};
+}
 // 模板不含任何预设后端地址与令牌。请打开「云端同步」设置，填入你自己的服务端地址与 token。
 let CLOUD=null;
 try{
@@ -780,6 +836,8 @@ function isFullData(d){return d&&Array.isArray(d.apps)&&Array.isArray(d.todos)&&
 let _cloudLastSync=0;   // 上次成功同步的时间
 let _cloudBehind=false; // 云端比本机新（仅提示，不自动覆盖）
 let _lastSyncedRev=0;    // 上次成功同步时的版本号（用于判断云端是否真的变了）
+let _cloudFromDev="";    // 云端数据最后修改来源设备
+let _cloudData=null;      // 最近一次从云端拿到的数据（供差异对比）
 async function loadCloud(force){
   if(!cloudOn())return false;
   try{
@@ -787,8 +845,15 @@ async function loadCloud(force){
     if(!r.ok)throw new Error("HTTP "+r.status);
     const j=await r.json().catch(()=>null);
     if(!j)throw new Error("返回不是 JSON");
-    const data=j.data;
+    let data=j.data;
+    // 加密数据：先用口令解密
+    if(j.enc||(data&&data.enc)){
+      if(!(CLOUD&&CLOUD.pass))throw new Error("云端是加密数据，请先填写同步口令");
+      data=await decryptState(data,CLOUD.pass);
+    }
     const cloudRev=Number(j.rev||(data&&data.rev)||0);
+    _cloudFromDev=(j.device&&j.device.name)||"未知设备";
+    _cloudData=data;
     const localRev=Number(S.rev||0);
     const hadLocal=isFullData(S);
 
@@ -809,7 +874,8 @@ async function loadCloud(force){
       saveLocal(); renderAll();
       _cloudBehind=false;_lastSyncedRev=cloudRev||S.rev;
       _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
-      toast("已从云端拉取最新数据 ✓");
+      cloudLog("拉取",true,"来自 "+_cloudFromDev+"，投递 "+((S.apps||[]).length)+" 条");
+      toast("已拉取云端最新数据 ✓（来自 "+_cloudFromDev+"）");
       return true;
     }
 
@@ -824,7 +890,8 @@ async function loadCloud(force){
         saveLocal(); renderAll();
         _cloudBehind=false;_lastSyncedRev=cloudRev;
         _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
-        toast("已拉取云端最新数据 ✓");
+        cloudLog("拉取",true,"来自 "+_cloudFromDev);
+        toast("已拉取云端最新数据 ✓（来自 "+_cloudFromDev+"）");
         return true;
       }
       // 自动检查时只提示，绝不悄悄覆盖本机
@@ -837,9 +904,45 @@ async function loadCloud(force){
     return true;
   }catch(e){
     _cloudState="error";refreshCloudBadge();
+    cloudLog("拉取",false,String(e&&e.message||e));
     return false;
   }
 }
+/* 云端差异对比：按记录 id（无 id 时按 公司+岗位）识别 */
+function cloudAppKey(a){ return (a&&a.id)?a.id:(((a&&a.co)||"")+"|"+((a&&a.ti)||"")); }
+function cloudDiff(cloudData){
+  const la=(S.apps||[]), ca=(cloudData.apps||[]);
+  const lk=new Set(la.map(cloudAppKey)), ck=new Set(ca.map(cloudAppKey));
+  return {
+    onlyCloud:ca.filter(a=>!lk.has(cloudAppKey(a))),
+    onlyLocal:la.filter(a=>!ck.has(cloudAppKey(a))),
+    cloudCount:ca.length, localCount:la.length
+  };
+}
+function cloudMergeIn(cloudData){
+  const map=new Map();
+  (cloudData.apps||[]).forEach(a=>map.set(cloudAppKey(a),a));
+  (S.apps||[]).forEach(a=>map.set(cloudAppKey(a),a));   // 同一条以本机为准
+  S.apps=Array.from(map.values());
+  ["mt","todos"].forEach(k=>{
+    const m=new Map();
+    (cloudData[k]||[]).forEach(x=>m.set(x.id||JSON.stringify(x),x));
+    (S[k]||[]).forEach(x=>m.set(x.id||JSON.stringify(x),x));
+    S[k]=Array.from(m.values());
+  });
+  save(true);
+}
+
+/* 每 60 秒静默检查一次云端（页面可见、非同步中才查） */
+setInterval(function(){
+  try{
+    if(!cloudOn())return;
+    if(document.hidden)return;
+    if(_cloudState==="syncing")return;
+    loadCloud(false);
+  }catch(e){}
+},60000);
+
 // 云端同步时剥离简历文件正文（Base64），只保留 fileId 引用，避免整包超网关/文档上限
 function cleanForCloud(src){
   const c=JSON.parse(JSON.stringify(src));
@@ -852,8 +955,8 @@ async function postCloud(payload){
   return r;
 }
 // 大载荷分片上传（防御性：绕过网关单包体积上限）
-async function saveCloudChunked(payload){
-  const raw=JSON.stringify(payload);
+async function saveCloudChunked(env){
+  const raw=JSON.stringify(env);
   const bytes=new TextEncoder().encode(raw);
   let b64=""; for(let i=0;i<bytes.length;i+=0x8000){ b64+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000)); }
   b64=btoa(b64);
@@ -861,51 +964,43 @@ async function saveCloudChunked(payload){
   for(let i=0;i<total;i++){
     const data=b64.slice(i*CH,(i+1)*CH);
     const r=await fetch(cloudURL()+"&action=save-chunk",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,index:i,total,data})});
-    if(!r.ok)throw new Error("chunk "+i+" failed");
+    if(!r.ok)throw new Error("分片 "+i+" 上传失败");
   }
   const mr=await fetch(cloudURL()+"&action=save-merge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,total})});
-  if(!mr.ok)throw new Error("merge failed");
-  try{const jj=await mr.json(); if(jj&&jj.rev){S.rev=jj.rev;S.savedAt=jj.rev;saveLocal();}}catch(e){}
-}
-// 后台退避重试：页面还开着就持续补传，直到云端收到
-let _bgRetryTimer=null,_bgRetries=0;
-function scheduleBackgroundRetry(){
-  if(_bgRetryTimer)return;
-  _bgRetryTimer=setTimeout(async()=>{
-    _bgRetryTimer=null;
-    if(_cloudState!=="error")return;
-    const ok=await saveCloud(true);
-    if(!ok&&_bgRetries<12){ _bgRetries++; scheduleBackgroundRetry(); }
-  },8000);
+  if(!mr.ok)throw new Error("分片合并失败");
+  try{const jj=await mr.json(); return jj&&jj.rev?jj.rev:0;}catch(e){return 0;}
 }
 async function saveCloud(silent){
   if(!cloudOn())return false;
-  S.rev=Date.now(); saveLocal();
-  const payload=cleanForCloud(S);
-  const raw=JSON.stringify(payload);
   _cloudState="syncing";refreshCloudBadge();
   try{
+    const env=await cloudEnvelope();
+    const raw=JSON.stringify(env);
+    let serverRev=0;
     if(raw.length>90000){
-      await saveCloudChunked(payload);
+      serverRev=await saveCloudChunked(env);
     }else{
-      let ok=false,serverRev=0;
+      let ok=false;
       for(let i=1;i<=3;i++){
         try{
-          const rs=await postCloud(payload);
+          const rs=await postCloud(env);
           try{const jj=await rs.json(); if(jj&&jj.rev)serverRev=jj.rev;}catch(e){}
           ok=true; break;
         }
         catch(e){ if(i<3) await new Promise(r=>setTimeout(r,500*i)); }
       }
-      if(!ok)throw new Error("retry exhausted");
-      // 采用服务器时间戳，保证两端 rev 同一时钟，后续比较才准
-      if(serverRev){ S.rev=serverRev; S.savedAt=serverRev; saveLocal(); }
+      if(!ok)throw new Error("重试 3 次仍失败");
     }
-    _cloudState="synced";_bgRetries=0;_cloudLastSync=Date.now();_cloudBehind=false;_lastSyncedRev=S.rev||0;
-    if(!silent)toast("已保存到云端 ✓");
+    // 采用服务器时间戳，保证两端 rev 同一时钟
+    S.rev=serverRev||Date.now(); S.savedAt=S.rev; saveLocal();
+    _cloudState="synced";_bgRetries=0;_cloudLastSync=Date.now();
+    _cloudBehind=false;_lastSyncedRev=S.rev;
+    cloudLog("上传",true,"投递 "+((S.apps||[]).length)+" 条"+(env.enc?"（已加密）":""));
+    if(!silent)toast("已上传到云端 ✓"+(env.enc?"（已加密）":""));
   }catch(e){
     _cloudState="error";
-    if(!silent)toast("本地已保存，云端暂未收到（将自动重试）");
+    cloudLog("上传",false,String(e&&e.message||e));
+    if(!silent)toast("云端暂未收到，已本地保存（将自动重试）");
     scheduleBackgroundRetry();
   }
   refreshCloudBadge();return _cloudState!=="error";
@@ -913,11 +1008,15 @@ async function saveCloud(silent){
 // 关闭/切走页面时用 sendBeacon 强制补传
 function flushOnHide(){
   if(!cloudOn())return;
+  // 开启加密时不能用 sendBeacon 兜底：加密是异步的，同步发出去只能是明文，
+  // 会把云端的密文覆盖成明文（数据泄露）。这种情况交给常规自动上传。
+  if(CLOUD&&CLOUD.pass)return;
   try{ S.rev=Date.now(); saveLocal(); }catch(e){}
   try{
-    const payload=JSON.stringify(cleanForCloud(S));
-    if(navigator.sendBeacon) navigator.sendBeacon(cloudURL(),new Blob([payload],{type:"application/json"}));
-    try{ if(typeof fetch==="function"&&"keepalive" in new Request("")){ fetch(cloudURL(),{method:"POST",headers:{"Content-Type":"application/json"},body:payload,keepalive:true}); } }catch(e){}
+    // 与正常上传保持同一信封格式，避免把设备信息/结构写丢
+    const env=JSON.stringify({payload:cleanForCloud(S),enc:0,device:_cloudDev,ts:Date.now()});
+    if(navigator.sendBeacon) navigator.sendBeacon(cloudURL(),new Blob([env],{type:"application/json"}));
+    try{ if(typeof fetch==="function"&&"keepalive" in new Request("")){ fetch(cloudURL(),{method:"POST",headers:{"Content-Type":"application/json"},body:env,keepalive:true}); } }catch(e){}
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{if(document.hidden)flushOnHide();});
@@ -2115,20 +2214,37 @@ function cloudForm(){
   const st=cloudOn()?(_cloudBehind?"⚠ 云端有更新，建议拉取":(_cloudState==="error"?"⚠ 上次同步失败":(_cloudState==="synced"?"✓ 已同步":"已连接"))):"未启用";
   const lastTxt=_cloudLastSync?(new Date(_cloudLastSync).toLocaleString()):"还没有同步过";
   const localRevTxt=S&&S.rev?new Date(S.rev).toLocaleString():"无";
+  const logHtml=(_cloudLog||[]).slice(0,5).map(function(x){
+    const d=new Date(x.t), hh=String(d.getHours()).padStart(2,"0"), mm=String(d.getMinutes()).padStart(2,"0");
+    return `<div style="display:flex;gap:8px;font-size:11.5px;color:${x.ok?"var(--ink2)":"var(--red)"}"><span style="color:var(--ink3)">${hh}:${mm}</span><span style="flex:none">${esc(x.action)}</span><span style="word-break:break-all">${esc(x.msg||(x.ok?"成功":"失败"))}</span></div>`;
+  }).join("")||'<div style="font-size:11.5px;color:var(--ink3)">还没有记录</div>';
+
   openSheet(`<h3>云端同步<button class="x" onclick="closeSheet()">✕</button></h3>
-  <div style="font-size:13px;line-height:1.7;color:var(--ink2);background:var(--blue-soft);padding:10px 12px;border-radius:12px;margin-bottom:12px"><b>多设备同步怎么用：</b>在手机和电脑都填<b>同一个地址 + 令牌</b>，即可互相拉取/上传数据。数据以<b>最后修改</b>为准，不会用旧数据覆盖新数据。</div>
-  <div class="f-row"><label>云端地址（URL）</label><input id="c_ep" value="${esc(cfg.endpoint||"")}" placeholder="https://你的云端接口地址"></div>
-  <div class="f-row"><label>访问令牌（token）</label><input id="c_tk" value="${esc(cfg.token||"")}" placeholder="云端接口分配的令牌"></div>
-  <div style="font-size:12px;color:var(--ink3);margin:4px 0 10px">当前状态：<b id="c_state">${st}</b>　｜　地址和令牌需要自己准备（本机服务 / 云函数 / NAS 均可），填入后点「保存并测试」。</div>
+  <div style="font-size:13px;line-height:1.7;color:var(--ink2);background:var(--blue-soft);padding:10px 12px;border-radius:12px;margin-bottom:12px"><b>多设备同步怎么用：</b>在手机和电脑都填<b>同一个地址 + 令牌</b>（加密的话口令也要一致），即可互相拉取/上传。</div>
+
+  <div class="f-row"><label>云端地址（URL）</label><input id="c_ep" value="${esc(cfg.endpoint||"")}" placeholder="http://127.0.0.1:8787"></div>
+  <div class="f-row"><label>访问令牌（token）</label><input id="c_tk" value="${esc(cfg.token||"")}" placeholder="服务端打印的令牌"></div>
+  <div class="f-row"><label>本机设备名</label><input id="c_dev" value="${esc(_cloudDev.name||"")}" placeholder="如：家里电脑 / 我的手机"></div>
+  <div class="f-row"><label>同步口令（可选，用于加密）</label><input id="c_pass" type="password" value="${esc(cfg.pass||"")}" placeholder="留空 = 不加密，服务器能看到明文 JSON"></div>
+  <div class="small" style="margin:-2px 0 10px">填了口令后，上传的是密文（AES-GCM），服务端和别人拿到文件也读不懂；<b>多台设备必须用同一口令</b>，忘了口令无法恢复。</div>
+
+  <div style="font-size:12px;color:var(--ink3);margin:4px 0 8px">当前状态：<b id="c_state">${st}</b></div>
   <div style="font-size:12px;line-height:1.9;color:var(--ink2);background:var(--gray-soft);border-radius:10px;padding:9px 12px;margin-bottom:10px">
     上次同步：<b>${lastTxt}</b><br>
     本机最后修改：<b>${localRevTxt}</b><br>
-    ${_cloudBehind?'<span style="color:var(--orange)">⚠ 云端比本机新，点「拉取云端数据」可获取最新版本</span>':'同步正常，会自动在改动后上传'}
+    云端最后修改来自：<b>${_cloudFromDev||"—"}</b><br>
+    ${_cloudBehind?'<span style="color:var(--orange)">⚠ 云端比本机新，可点「查看差异」决定怎么合并</span>':'同步正常，改动后会自动上传，每 60 秒自动检查云端'}
   </div>
+
   <div class="btnrow" style="margin-bottom:10px">
     <button class="btn" id="c_pull">📥 拉取云端数据</button>
     <button class="btn" id="c_push">📤 上传到云端</button>
   </div>
+  ${_cloudBehind?'<div class="btnrow" style="margin-bottom:10px"><button class="btn primary" id="c_diff">🔍 查看差异并合并</button></div>':''}
+
+  <div style="font-size:12px;font-weight:600;color:var(--ink2);margin:2px 0 6px">最近同步记录</div>
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:12px">${logHtml}</div>
+
   <div class="btnrow">
     <button class="btn" onclick="closeSheet()">取消</button>
     <button class="btn danger" id="c_disc">${cloudOn()?"断开云端":"清除配置"}</button>
@@ -2139,12 +2255,19 @@ $("#btnCloud").addEventListener("click",cloudForm);
 document.addEventListener("click",async e=>{
   if(e.target.id==="c_save"){
     const ep=$("#c_ep").value.trim(),tk=$("#c_tk").value.trim();
+    const pv=($("#c_pass")?$("#c_pass").value.trim():"");
+    const dn=($("#c_dev")?$("#c_dev").value.trim():"");
     if(!ep||!tk){alert("请同时填写云端地址和令牌");return}
-    CLOUD={endpoint:ep,token:tk};localStorage.setItem(CLOUD_KEY,JSON.stringify(CLOUD));refreshCloudBadge();
+    if(dn&&dn!==_cloudDev.name){ _cloudDev.name=dn; try{localStorage.setItem(DEV_KEY,JSON.stringify(_cloudDev))}catch(e){} }
+    CLOUD={endpoint:ep,token:tk};
+    if(pv)CLOUD.pass=pv;
+    try{localStorage.setItem(CLOUD_KEY,JSON.stringify(CLOUD))}catch(e){}
+    refreshCloudBadge();
     toast("正在测试连接…");
     const ok=await loadCloud();
-    closeSheet();renderAll();refreshCloudBadge();
-    toast(ok?"已连云端，已拉取最新数据":"连接失败，请检查地址/令牌是否可访问");
+    closeSheet();
+    toast(ok?(pv?"已连接（加密模式）":"已连接云端"):"连接失败：检查地址/令牌，或口令是否与另一台一致");
+    setTimeout(()=>cloudForm(),150);   // 回填最新状态
   }
   if(e.target.id==="c_disc"){
     CLOUD=null;localStorage.removeItem(CLOUD_KEY);refreshCloudBadge();closeSheet();renderAll();toast("已断开云端");
@@ -2156,6 +2279,48 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="c_pull"){
     toast("正在从云端拉取…");const ok=await loadCloud(true);closeSheet();renderAll();refreshCloudBadge();
     toast(ok?"已从云端拉取最新数据 ✓":"拉取失败，请检查网络");
+  }
+  if(e.target.id==="c_diff"){
+    if(!_cloudData){toast("还没有云端数据，先点「拉取云端数据」");return;}
+    const d=cloudDiff(_cloudData);
+    const list=(arr,color)=>arr.slice(0,8).map(a=>`<div style="font-size:12.5px;color:${color};padding:3px 0">· ${esc((a.co||"未命名")+" · "+(a.ti||""))}</div>`).join("")||'<div style="font-size:12px;color:var(--ink3);padding:3px 0">（无）</div>';
+    openSheet(`<h3>云端差异<button class="x" onclick="closeSheet()">✕</button></h3>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.8;margin-bottom:10px">
+        本机 <b>${d.localCount}</b> 条投递，云端 <b>${d.cloudCount}</b> 条（来自 ${esc(_cloudFromDev||"未知设备")}）
+      </div>
+      <div style="background:var(--gray-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--blue);margin-bottom:2px">云端多出 ${d.onlyCloud.length} 条</div>${list(d.onlyCloud,"var(--ink2)")}
+        <div style="font-size:12.5px;font-weight:700;color:var(--green);margin:8px 0 2px">本机独有 ${d.onlyLocal.length} 条</div>${list(d.onlyLocal,"var(--ink2)")}
+      </div>
+      <div class="btnrow" style="flex-direction:column;gap:8px">
+        <button class="btn primary" id="c_merge">合并两者（推荐，重复记录以本机为准）</button>
+        <button class="btn" id="c_usecloud">完全用云端覆盖本机</button>
+        <button class="btn" id="c_uselocal">保留本机并上传（丢弃云端改动）</button>
+      </div>`);
+    return;
+  }
+  if(e.target.id==="c_merge"){
+    if(!_cloudData)return;
+    cloudMergeIn(_cloudData);
+    _cloudBehind=false;_cloudState="synced";refreshCloudBadge();
+    cloudLog("合并",true,"并集导入");
+    closeSheet();renderAll();toast("已合并，正在上传…");
+    setTimeout(()=>saveCloud(false),300);
+    return;
+  }
+  if(e.target.id==="c_usecloud"){
+    if(!_cloudData)return;
+    S=JSON.parse(JSON.stringify(BLANK));Object.assign(S,_cloudData);
+    S.rev=_cloudData.rev||Date.now();S.savedAt=S.rev;saveLocal();
+    _cloudBehind=false;_cloudState="synced";_lastSyncedRev=S.rev;refreshCloudBadge();
+    cloudLog("覆盖",true,"用云端覆盖本机");
+    closeSheet();renderAll();toast("已用云端数据覆盖本机");
+    return;
+  }
+  if(e.target.id==="c_uselocal"){
+    _cloudBehind=false;closeSheet();toast("正在上传本机数据…");
+    setTimeout(()=>saveCloud(false),200);
+    return;
   }
 });
 

@@ -31,18 +31,26 @@ let chunks = new Map(); // key -> { total, parts: [] }
 function readStore() {
   try {
     const j = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
-    return { payload: j.payload || null, rev: j.rev || 0, updatedAt: j.updatedAt || 0 };
+    return { payload: j.payload || null, device: j.device || null, enc: !!j.enc, rev: j.rev || 0, updatedAt: j.updatedAt || 0 };
   } catch (e) {
-    return { payload: null, rev: 0, updatedAt: 0 };
+    return { payload: null, device: null, enc: false, rev: 0, updatedAt: 0 };
   }
 }
 
-function writeStore(payload) {
+function writeStore(payload, device, enc) {
   const now = Date.now();
   const tmp = DATA_FILE + ".tmp";
-  fs.writeFileSync(tmp, JSON.stringify({ payload, rev: now, updatedAt: now }));
-  fs.renameSync(tmp, DATA_FILE); // 原子写，避免写一半断掉
+  fs.writeFileSync(tmp, JSON.stringify({ payload, device: device || null, enc: !!enc, rev: now, updatedAt: now }));
+  fs.renameSync(tmp, DATA_FILE);
   return now;
+}
+
+// 兼容两种请求体：信封 {payload,enc,device} 或旧版直接发数据
+function pickEnvelope(body) {
+  if (body && Object.prototype.hasOwnProperty.call(body, "payload")) {
+    return { payload: body.payload, enc: !!body.enc, device: body.device || null };
+  }
+  return { payload: body, enc: false, device: null };
 }
 
 function corsHeaders() {
@@ -75,7 +83,7 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET") {
     if (action === "ping") return send(200, { ok: true, server: "node-local", time: Date.now() });
     const st = readStore();
-    return send(200, { ok: true, data: st.payload, rev: st.rev, updatedAt: st.updatedAt });
+    return send(200, { ok: true, data: st.payload, enc: st.enc ? 1 : 0, device: st.device, rev: st.rev, updatedAt: st.updatedAt });
   }
 
   if (req.method === "POST") {
@@ -108,11 +116,13 @@ const server = http.createServer((req, res) => {
         if (!rec) return send(400, { ok: false, msg: "没有找到待合并的分片" });
         try {
           const b64 = rec.parts.filter((x) => typeof x === "string").join("");
-          const payload = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
-          if (!payload || !Array.isArray(payload.apps)) return send(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
+          const parsed = JSON.parse(Buffer.from(b64, "base64").toString("utf8"));
+          const env = pickEnvelope(parsed);
+          if (!env.payload) return send(400, { ok: false, msg: "数据为空" });
+          if (!env.enc && !Array.isArray(env.payload.apps)) return send(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
           chunks.delete(j.key);
-          const rev = writeStore(payload);
-          console.log("[sync] 分片合并写入成功 rev=" + rev + "，投递 " + payload.apps.length + " 条");
+          const rev = writeStore(env.payload, env.device, env.enc);
+          console.log("[sync] 分片合并 rev=" + rev + (env.enc ? "（加密）" : "，投递 " + env.payload.apps.length + " 条"));
           return send(200, { ok: true, rev });
         } catch (e) {
           return send(400, { ok: false, msg: "合并失败：" + e.message });
@@ -120,9 +130,11 @@ const server = http.createServer((req, res) => {
       }
 
       // 整包保存
-      if (!j || !Array.isArray(j.apps)) return send(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
-      const rev = writeStore(j);
-      console.log("[sync] 写入成功 rev=" + rev + "，投递 " + j.apps.length + " 条");
+      const env = pickEnvelope(j);
+      if (!env.payload) return send(400, { ok: false, msg: "数据为空" });
+      if (!env.enc && !Array.isArray(env.payload.apps)) return send(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
+      const rev = writeStore(env.payload, env.device, env.enc);
+      console.log("[sync] 写入 rev=" + rev + (env.enc ? "（加密）" : "，投递 " + env.payload.apps.length + " 条") + (env.device ? " 来自 " + env.device.name : ""));
       return send(200, { ok: true, rev });
     });
     return;

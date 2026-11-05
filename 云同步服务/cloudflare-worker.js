@@ -42,9 +42,9 @@ export default {
     if (request.method === "GET") {
       if (action === "ping") return json(200, { ok: true, server: "cf-worker", time: Date.now() });
       const raw = await env.BOARD.get("board");
-      if (!raw) return json(200, { ok: true, data: null, rev: 0 });
+      if (!raw) return json(200, { ok: true, data: null, enc: 0, rev: 0 });
       const st = JSON.parse(raw);
-      return json(200, { ok: true, data: st.payload, rev: st.rev, updatedAt: st.updatedAt });
+      return json(200, { ok: true, data: st.payload, enc: st.enc ? 1 : 0, device: st.device || null, rev: st.rev, updatedAt: st.updatedAt });
     }
 
     if (request.method === "POST") {
@@ -68,19 +68,23 @@ export default {
         }
         try {
           const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-          const payload = JSON.parse(new TextDecoder().decode(bin));
-          if (!payload || !Array.isArray(payload.apps)) return json(400, { ok: false, msg: "数据格式不对" });
+          const parsed = JSON.parse(new TextDecoder().decode(bin));
+          const envl = parsed && Object.prototype.hasOwnProperty.call(parsed, "payload") ? parsed : { payload: parsed, enc: 0, device: null };
+          if (!envl.payload) return json(400, { ok: false, msg: "数据为空" });
+          if (!envl.enc && !Array.isArray(envl.payload.apps)) return json(400, { ok: false, msg: "数据格式不对" });
           const now = Date.now();
-          await env.BOARD.put("board", JSON.stringify({ payload, rev: now, updatedAt: now }));
+          await env.BOARD.put("board", JSON.stringify({ payload: envl.payload, enc: envl.enc ? 1 : 0, device: envl.device || null, rev: now, updatedAt: now }));
           return json(200, { ok: true, rev: now });
         } catch (e) {
           return json(400, { ok: false, msg: "合并失败：" + e.message });
         }
       }
 
-      if (!j || !Array.isArray(j.apps)) return json(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
+      const envl = j && Object.prototype.hasOwnProperty.call(j, "payload") ? j : { payload: j, enc: 0, device: null };
+      if (!envl.payload) return json(400, { ok: false, msg: "数据为空" });
+      if (!envl.enc && !Array.isArray(envl.payload.apps)) return json(400, { ok: false, msg: "数据格式不对（缺少 apps）" });
       const now = Date.now();
-      await env.BOARD.put("board", JSON.stringify({ payload: j, rev: now, updatedAt: now }));
+      await env.BOARD.put("board", JSON.stringify({ payload: envl.payload, enc: envl.enc ? 1 : 0, device: envl.device || null, rev: now, updatedAt: now }));
       return json(200, { ok: true, rev: now });
     }
 
