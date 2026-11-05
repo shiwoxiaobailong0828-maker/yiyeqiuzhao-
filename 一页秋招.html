@@ -533,8 +533,19 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
     <ul class="li">
       <li><b>口述填表</b>：说一句"今天面了腾讯产品岗，问了自我介绍和职业规划"，自动整理进投递 / 面试记录，写入前先让你勾选确认</li>
       <li><b>文档导入</b>：上传简历或记录文档，逐条解析成投递、面试、Offer、目标、待办</li>
-      <li><b>联网查询</b>：问"某公司今年还招吗""这个岗位薪资多少"，开启联网后给出来源链接（设置第 4 步勾选）</li>
+      <li><b>联网查询</b>：默认开启。问"某公司今年还招吗""薪资多少"，会联网检索并给出来源链接；可与本地文件同时用（如对照简历查岗位要求）</li>
       <li><b>面试辅导与复盘</b>：给答题思路、高频追问，或根据你的实际数据指出问题</li>
+    </ul>
+    <h4>快捷指令（输入区 ⚡ 指令，或直接手打）</h4>
+    <ul class="li">
+      <li><b>/复盘</b> 投递复盘：结论 + 最该做的 3 件事</li>
+      <li><b>/简历</b> 简历诊断：指出原文问题 + 改写示例（先上传简历文件）</li>
+      <li><b>/匹配</b> 岗位匹配打分：贴 JD 给 0-100 分与缺口</li>
+      <li><b>/模拟面试</b> AI 当面试官，一次一问，5 轮后评分</li>
+      <li><b>/周报</b> 生成可复制的本周小结</li>
+      <li><b>/谈薪</b> 谈薪原则 + 可直接发 HR 的话</li>
+      <li><b>/打招呼</b> Boss 开场白 3 版</li>
+      <li><b>/查</b> 联网查招聘 / 薪资 / 笔试考点</li>
     </ul>
     <h4>支持的文件</h4>
     <ul class="li green">
@@ -550,7 +561,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
       <li>拖底边：上下调高度（电脑）；手机拖顶部横条调高度</li>
       <li>双击标题栏：复位位置</li>
     </ul>
-    <div class="small" style="margin-top:8px">回答为纯文本 + 表情，不使用表格排版；模型配置走「设置 → 测试 → 选模型 → 保存」四步。</div>
+    <div class="small" style="margin-top:8px">回答为纯文本 + 表情，不使用表格排版；模型配置走「设置 → 测试 → 选模型 → 保存」四步。联网默认开启，若某模型不支持会自动降级为不联网，可在设置第 4 步关闭。</div>
   </div>
 
     <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.2-3 4"/><path d="M12 17h.01"/></svg>怎么开始</h3>
@@ -585,6 +596,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
     <div id="aiDocArea" style="padding:0 16px"></div>
     <div class="ai-foot">
       <div class="ai-tools">
+        <button class="ai-tool-btn" id="aiCmdBtn" title="快捷指令">⚡ 指令</button>
         <button class="ai-tool-btn" id="aiSetup" title="设置">⚙ 设置</button>
         <button class="ai-pill muted" id="aiModelBtn" title="快速切换模型">未配置模型</button>
         <button class="ai-pill" id="aiStyleBtn" title="快速切换响应风格">平衡</button>
@@ -2079,9 +2091,11 @@ const AI_STYLES=[
 ];
 let aiStyle=(()=>{try{return localStorage.getItem("wb_qiuzhao_aistyle")||"balanced"}catch(e){return "balanced"}})();
 function aiTemp(){const s=AI_STYLES.find(x=>x.id===aiStyle);return s?s.temp:0.5;}
-/* 联网检索参数：仅在开启且当前厂商支持时下发 */
+/* 联网检索参数：默认开启；若模型不支持导致失败，本次会话自动降级 */
+let _webBlocked=false;
 function aiWebParams(){
-  if(!LLM_CFG||!LLM_CFG.web)return {};
+  if(_webBlocked)return {};
+  if(!LLM_CFG||LLM_CFG.web===false)return {};
   if(LLM_CFG.id==="qwen")return {enable_search:true};        // 通义千问原生联网
   if(LLM_CFG.id==="zhipu")return {tools:[{type:"web_search",web_search:{enable:true}}]};
   return {};
@@ -2096,6 +2110,7 @@ let aiPendingDoc=null;  // 待发送的 Markdown 文档 {name,size,text}
 
 function aiSaveCfg(){try{localStorage.setItem(LLM_KEY,JSON.stringify(LLM_CFG))}catch(e){}}
 function aiReady(){return !!(LLM_CFG&&LLM_CFG.base&&LLM_CFG.key&&LLM_CFG.model)}
+function aiWebOn(){return !!(LLM_CFG&&LLM_CFG.web!==false)}
 
 /* 会话历史持久化（刷新后保留多轮上下文） */
 function aiSaveChat(){
@@ -2304,7 +2319,7 @@ let _streamRefs=[];
 function aiRenderHistory(){
   const b=$("#aiBody");b.innerHTML="";
   aiChat.forEach(m=>{
-    if(m.role==="user")b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(m.content||"")}</div>`);
+    if(m.role==="user")b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(m.disp||m.content||"")}</div>`);
     else if(m.role==="assistant"&&m.content){
       b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(aiPlainText(m.content))}</div>`);
       if(m.refs&&m.refs.length)aiAppendRefs(b,m.refs);
@@ -2384,7 +2399,7 @@ function aiSetupForm(){
     style:aiStyle||"balanced",
     testing:false, testOk:false, testMsg:"",
     models:[], picked:"", checked:[], search:"",
-    web: !!cfg.web
+    web: (cfg.web===undefined?true:!!cfg.web)
   };
   _aiWiz.lastModel=cfg.model||"";
   aiWizRender();
@@ -2603,6 +2618,21 @@ const AI_SYSTEM=`你是「一页秋招」求职管理工具的智能助手，名
 - 「官方笔试原题」基本不公开。绝不声称掌握官方原题；只能给公开面经里流传的题型与考点，并标注「非官方、网友回忆版，仅供参考」。
 - 不编造具体薪资数字、HC 数量、笔试题目；不确定就说不确定。
 
+【两种信息源（可同时使用）】
+- 本地文档：用户上传的 md/txt/docx/pdf 内容会随消息一起发来，涉及简历或记录时优先依据它。
+- 联网检索：默认开启，可查公司是否在招、薪资区间、笔试考点等实时信息，回答时标注来源与时间。
+- 两者可结合：例如「对照我的简历 + 联网查这个岗位今年还招不招」，先给结论再给依据。
+
+【可承接的任务】
+- 投递复盘：给结论、分布、最该做的三件事，不罗列全部名单
+- 简历诊断：指出原文问题并给改写示例，不要只说"建议优化"
+- 岗位匹配：给 0-100 分 + 命中项 + 缺口 + 投不投的建议
+- 模拟面试：一次一题，等我回答再追问，最后评分复盘
+- 周报：可直接复制的短句总结
+- 谈薪：原则 + 可直接发 HR 的话 + 反问应对
+- 打招呼：3 版不同风格的开场白，各 60 字内
+- 联网查公司：招聘状态、薪资、笔试考点，查不到就直说
+
 【输出格式（重要，务必遵守）】
 - 只用纯文本，不要 Markdown：不要出现双星号加粗、## 标题、竖线表格、反引号代码、> 引用、--- 分隔线。
 - 需要分条时用「• 」或「1. 2. 3.」，一行一条，不要把条目写成长段落。
@@ -2626,7 +2656,7 @@ function aiSystemPrompt(){
   // 注入全量数据概况，让 AI 有全局视野做主动分析
   const stats=aiGlobalStats();
   if(stats)extra+="\n\n【当前整体数据概况】"+stats;
-  if(LLM_CFG&&LLM_CFG.web)extra+="\n\n【联网检索状态】本次已开启联网检索。请依据检索结果回答，并在引用到检索信息的位置用 [1][2] 标注编号（编号顺序与实际来源一致），不要编造来源或编号。";
+  if(aiWebOn())extra+="\n\n【联网检索状态】本次已开启联网检索。请依据检索结果回答，并在引用到检索信息的位置用 [1][2] 标注编号（编号顺序与实际来源一致），不要编造来源或编号。";
   const ctx=aiCtxData();
   if(ctx)extra+="\n\n【用户正在查看的页面数据】\n"+ctx;
   return AI_SYSTEM+extra;
@@ -2732,6 +2762,7 @@ async function aiCall(){
   // 文档优先：有已载入的文档则发文档
   let text="";
   let isDoc=false,docRef=null;
+  let exp=null;
   if(aiPendingDoc){
     isDoc=true;docRef=aiPendingDoc;
     const doc=docRef;
@@ -2740,15 +2771,19 @@ async function aiCall(){
     aiUserMsg("📄 "+doc.name+"（已发送，等待解析导入）",false);
     aiClearDoc();
   }else{
-    text=$("#aiInput").value.trim();if(!text)return;
-    aiUserMsg(text,false);$("#aiInput").value="";
+    const raw=$("#aiInput").value.trim();if(!raw)return;
+    exp=aiExpandCmd(raw);
+    text=exp.text;
+    aiUserMsg(raw,false);$("#aiInput").value="";
   }
   // 清理上一轮待确认项 + 记录本轮快照（失败回滚用）
   aiPending=null;
   const pv0=document.querySelector(".ai-preview");if(pv0)pv0.remove();
   const baseLen=aiChat.length;
   aiLastInput=text;
-  aiChat.push({role:"user",content:text});
+  const userMsg={role:"user",content:text};
+  if(exp&&exp.cmd)userMsg.disp="/"+exp.cmd.k;
+  aiChat.push(userMsg);
   aiSaveChat();
   aiBusy=true;aiAbort=new AbortController();
   $("#aiSend").textContent="停止"; // 不 disabled，保证「停止」可点击
@@ -2757,8 +2792,15 @@ async function aiCall(){
     const url=LLM_CFG.base.replace(/\/$/,"")+"/chat/completions";
     const sys=aiSystemPrompt();
     // 第一段：非流式，稳妥拿 tool_calls（填表用低 temperature 保证准确）
-    const r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
-      body:JSON.stringify(Object.assign({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false,temperature:Math.min(aiTemp(),0.3)},aiWebParams()))});
+    const baseBody={model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false,temperature:Math.min(aiTemp(),0.3)};
+    let r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+      body:JSON.stringify(Object.assign({},baseBody,aiWebParams()))});
+    // 联网参数不被该模型支持时，自动去掉联网重试一次（静默降级，不影响正常对话）
+    if(!r.ok&&!_webBlocked&&(r.status===400||r.status===404||r.status===422)){
+      _webBlocked=true;
+      r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+        body:JSON.stringify(baseBody)});
+    }
     if(!r.ok){const j=await r.json().catch(()=>({}));const msg=(j.error&&j.error.message)||("HTTP "+r.status);throw new Error(msg);}
     const j=await r.json();
     const msg=j.choices&&j.choices[0]&&j.choices[0].message;
@@ -2990,6 +3032,51 @@ function aiRenderDoc(){
   area.innerHTML=aiPendingDoc?`<div class="ai-dochip">📄 ${esc(aiPendingDoc.name)}（${(aiPendingDoc.size/1024).toFixed(1)} KB）<button class="del" data-ai-doc-clear="1">✕</button></div>`:"";
 }
 
+/* ===== 快捷指令：把常见任务做成一键模板 ===== */
+const AI_CMDS=[
+  {k:"复盘",label:"投递复盘",desc:"一句话结论 + 最该做的 3 件事",
+   tpl:"请基于我的真实数据做一次投递复盘。要求：1) 先给一句话结论；2) 结果分布（用短句，不要表格）；3) 最该处理的 3 件事，按优先级；4) 本周建议动作。不要罗列全部公司名单。"},
+  {k:"简历",label:"简历诊断",desc:"指出具体问题并给改写示例",
+   tpl:"请诊断我的简历（若本次附带了文档，就以该文档为简历内容）。输出：1) 一句话整体印象；2) 3-5 条具体问题，每条写「原文哪里有问题 → 应该怎么改」；3) 针对目标岗位缺失的关键词；4) 一段改写示例。如果我还不知道要投什么岗位，先问我是哪个方向。"},
+  {k:"匹配",label:"岗位匹配打分",desc:"贴 JD，给 0-100 分与缺口",
+   tpl:"我会给你一段岗位 JD（或写在补充信息里）。请按此格式输出：1) 匹配分 0-100，一句话理由；2) 命中的要求，最多 4 条；3) 缺口，最多 4 条，写清怎么补；4) 建议投不投，为什么。",
+   },
+  {k:"模拟面试",label:"模拟面试",desc:"AI 当面试官，一次一题",
+   tpl:"请扮演面试官，针对我的目标岗位开始模拟面试。规则：一次只问一个问题，等我回答后再追问或换题；共 5 轮，结束后给评分和复盘。第一句先说明规则，然后直接问第一个问题。"},
+  {k:"周报",label:"本周小结",desc:"可直接复制的周报文本",
+   tpl:"请生成一份可以直接复制的本周秋招周报，包含：本周新增投递、进入面试的、拿到的 Offer、卡住需要跟进跟进的、下周计划。用短句，不要表格。"},
+  {k:"谈薪",label:"谈薪话术",desc:"原则 + 可直接发 HR 的一段话",
+   tpl:"请给我谈薪话术。先给 3 条核心原则，再给一段可以直接发给 HR 的话（150 字内），最后给 3 个可能被反问的问题及应对。"},
+  {k:"打招呼",label:"打招呼话术",desc:"Boss 开场白 3 版",
+   tpl:"请针对我指定的岗位，生成 3 版 Boss 直聘打招呼话术（各 60 字内，风格分别为专业型、结果型、真诚型），并说明各自适合什么公司。"},
+  {k:"查",label:"联网查公司",desc:"招聘 / 薪资 / 笔试考点",
+   tpl:"请联网查询我提到的公司或岗位：今年是否在招、薪资区间、笔试常考内容。要求：标注来源和检索时间；查不到就直说查不到，不要编造；不要声称掌握官方笔试原题。"}
+];
+function aiExpandCmd(text){
+  const t=(text||"").trim();
+  if(t.charAt(0)!=="/")return {text:t,cmd:null};
+  const m=t.match(/^\/([^\s]+)[ \t]*([\s\S]*)$/);
+  if(!m)return {text:t,cmd:null};
+  const key=m[1];
+  const cmd=AI_CMDS.find(c=>c.k===key||c.label===key);
+  if(!cmd)return {text:t,cmd:null};
+  const rest=(m[2]||"").trim();
+  return {text:cmd.tpl+(rest?("\n\n补充信息："+rest):""),cmd:cmd};
+}
+function aiCmdSheet(){
+  const rows=AI_CMDS.map(c=>`<div class="wiz-model" data-cmd="${c.k}"><span class="dot"></span><span style="min-width:0"><span style="display:block">/${c.k}　${c.label}</span><span style="display:block;font-size:11px;color:var(--ink3);font-weight:400">${c.desc}</span></span></div>`).join("");
+  openSheet(`<h3>快捷指令<button class="x" onclick="closeSheet()">✕</button></h3>
+    <div class="small" style="margin:-4px 0 8px">点一个填进输入框，可再补充细节；也可以直接手打 /指令</div>
+    <div class="wiz-models">${rows}</div>`);
+  document.querySelectorAll("#sheet [data-cmd]").forEach(row=>{
+    row.addEventListener("click",()=>{
+      closeSheet(true);
+      const inp=$("#aiInput");
+      if(inp){inp.value="/"+row.dataset.cmd+" ";inp.focus();}
+    });
+  });
+}
+
 /* ===== 模型 / 响应风格 快速切换 ===== */
 const AI_LIST_KEY="wb_qiuzhao_llm_list";
 function aiLoadList(){
@@ -3025,7 +3112,7 @@ function aiRefreshTools(){
   if(LLM_CFG&&LLM_CFG.model&&LLM_CFG.base)aiRememberCfg(LLM_CFG); // 保证当前配置一定在可切换列表里
   const mb=$("#aiModelBtn"), sb=$("#aiStyleBtn");
   if(mb){
-    if(LLM_CFG&&LLM_CFG.model){mb.textContent=LLM_CFG.model+(LLM_CFG.web?" · 联网":"");mb.classList.remove("muted");}
+    if(LLM_CFG&&LLM_CFG.model){mb.textContent=LLM_CFG.model+(aiWebOn()?" · 联网":"");mb.classList.remove("muted");}
     else{mb.textContent="未配置模型";mb.classList.add("muted");}
     mb.title="当前模型："+(LLM_CFG&&LLM_CFG.model?LLM_CFG.model:"未配置")+"（点击切换）";
   }
@@ -3223,6 +3310,7 @@ $("#aiFab").addEventListener("click",()=>{
 $("#aiClose").addEventListener("click",aiClose);
 $("#aiClear").addEventListener("click",()=>{if(!confirm("清空当前对话？"))return;aiClearChat();aiRenderHistory();aiBotMsg("对话已清空，重新开始吧。",false);});
 $("#aiOverlay").addEventListener("click",e=>{if(e.target.id==="aiOverlay")aiClose()});
+$("#aiCmdBtn").addEventListener("click",aiCmdSheet);
 $("#aiSetup").addEventListener("click",aiSetupForm);
 $("#aiAttach").addEventListener("click",()=>$("#aiFile").click());
 $("#aiFile").addEventListener("change",e=>aiFileChange(e.target));
