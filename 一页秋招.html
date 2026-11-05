@@ -253,7 +253,16 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .ai-preview .pt{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px}
 .ai-preview .pv{font-size:13px;color:var(--ink);margin:4px 0;display:flex;gap:6px;align-items:flex-start}
 .ai-preview .pv input{margin-top:3px}
-.ai-foot{display:flex;gap:8px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.ai-foot{display:flex;flex-direction:column;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.ai-tools{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.ai-tools::-webkit-scrollbar{display:none}
+.ai-tool-btn{flex:none;border:none;background:var(--gray-soft);border-radius:10px;min-height:30px;padding:0 11px;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:.15s}
+.ai-tool-btn:hover{background:var(--blue-soft);color:var(--blue)}
+.ai-pill{flex:none;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:none;background:var(--blue-soft);color:var(--blue);border-radius:980px;min-height:30px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.ai-pill:hover{background:#d6e8ff}
+.ai-pill.muted{background:var(--gray-soft);color:var(--ink3);font-weight:500}
+.ai-tools .ai-attach{width:32px;min-height:30px;font-size:15px;border-radius:10px}
+.ai-inputrow{display:flex;gap:8px;align-items:flex-end}
 .ai-foot textarea{flex:1;border:none;background:var(--gray-soft);border-radius:14px;padding:10px 13px;font-size:15px;font-family:inherit;color:var(--ink);resize:none;min-height:44px;max-height:110px;outline:none}
 .ai-foot .send{flex:none;border:none;background:var(--blue);color:#fff;border-radius:14px;padding:0 18px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px}
 .ai-foot .send:disabled{opacity:.5;cursor:not-allowed}
@@ -299,6 +308,8 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .wiz-sum div{display:flex;gap:10px;padding:3px 0;align-items:flex-start}
 .wiz-sum b{color:var(--ink2);font-weight:600;flex:none;width:42px}
 .wiz-sum span{color:var(--ink);word-break:break-all}
+.wiz-check{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--ink);cursor:pointer;min-height:38px;font-weight:500}
+.wiz-check input{width:18px;height:18px;accent-color:var(--blue);flex:none}
 #aiFab:hover{transform:scale(1.08)}
 #aiFab:active{transform:scale(.95)}
 </style>
@@ -533,12 +544,17 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
     <div class="ai-body" id="aiBody"></div>
     <div id="aiDocArea" style="padding:0 16px"></div>
     <div class="ai-foot">
-      <button class="btn small" id="aiSetup" style="min-height:44px;border-radius:14px">设置</button>
-      <button class="ai-attach" id="aiAttach" title="上传文档（md/txt/json/csv 等）">📎</button>
-      <button class="ai-attach" id="aiMic" title="语音输入">🎤</button>
-      <input type="file" id="aiFile" accept=".md,.markdown,.txt,.json,.csv,.tsv,.html,.htm,text/markdown,text/plain,application/json,text/csv" hidden>
-      <textarea id="aiInput" placeholder="例如：今天面了腾讯的产品岗，一面问了自我介绍和职业规划，我职业规划答得不好…" rows="1"></textarea>
-      <button class="send" id="aiSend">发送</button>
+      <div class="ai-tools">
+        <button class="ai-tool-btn" id="aiSetup" title="设置">⚙ 设置</button>
+        <button class="ai-pill muted" id="aiModelBtn" title="快速切换模型">未配置模型</button>
+        <button class="ai-pill" id="aiStyleBtn" title="快速切换响应风格">平衡</button>
+        <button class="ai-attach" id="aiAttach" title="上传文档（md/txt/json/csv 等）">📎</button>
+        <input type="file" id="aiFile" accept=".md,.markdown,.txt,.json,.csv,.tsv,.html,.htm,text/markdown,text/plain,application/json,text/csv" hidden>
+      </div>
+      <div class="ai-inputrow">
+        <textarea id="aiInput" placeholder="例如：今天面了腾讯的产品岗，一面问了自我介绍和职业规划，我职业规划答得不好…" rows="1"></textarea>
+        <button class="send" id="aiSend">发送</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2023,6 +2039,13 @@ const AI_STYLES=[
 ];
 let aiStyle=(()=>{try{return localStorage.getItem("wb_qiuzhao_aistyle")||"balanced"}catch(e){return "balanced"}})();
 function aiTemp(){const s=AI_STYLES.find(x=>x.id===aiStyle);return s?s.temp:0.5;}
+/* 联网检索参数：仅在开启且当前厂商支持时下发 */
+function aiWebParams(){
+  if(!LLM_CFG||!LLM_CFG.web)return {};
+  if(LLM_CFG.id==="qwen")return {enable_search:true};        // 通义千问原生联网
+  if(LLM_CFG.id==="zhipu")return {tools:[{type:"web_search",web_search:{enable:true}}]};
+  return {};
+}
 let aiChat=[];          // 会话消息 [{role,content}]
 let aiPending=null;     // 待确认的工具调用 [{name,args,label}]
 let aiAbort=null;       // AbortController，用于中断
@@ -2162,6 +2185,7 @@ function aiOpen(){
   if(!LLM_CFG){aiSetupForm();}
   $("#aiOverlay").classList.add("on");
   if(window.__aiResizeApply)window.__aiResizeApply();
+  aiRefreshTools();
   $("#aiCfg").textContent=aiReady()?((LLM_CFG.name||"模型")+" · "+LLM_CFG.model):"未配置";
   aiLoadChat();
   aiRenderHistory();
@@ -2239,7 +2263,8 @@ function aiSetupForm(){
     key:cfg.key||"",
     style:aiStyle||"balanced",
     testing:false, testOk:false, testMsg:"",
-    models:[], picked:"", search:""
+    models:[], picked:"", search:"",
+    web: !!cfg.web
   };
   _aiWiz.lastModel=cfg.model||"";
   aiWizRender();
@@ -2285,6 +2310,10 @@ function aiWizRender(){
       <div><b>厂商</b><span>${esc(p.name)}${(p.base&&p.base!==w.base)?"（自定义地址）":""}</span></div>
       <div><b>接口</b><span>${esc(w.base)}</span></div>
       <div><b>模型</b><span>${esc(model)}</span></div>
+    </div>
+    <div class="f-row"><label>联网检索（查招聘 / 薪资 / 笔试信息）</label>
+      <label class="wiz-check"><input type="checkbox" id="w_web" ${w.web?"checked":""}> 开启后 AI 会联网检索实时信息</label>
+      <div class="small" style="margin-top:4px">目前通义千问支持原生联网检索；其他厂商未开通该能力时开关无效。</div>
     </div>
     <div class="f-row"><label>响应风格（影响创造力与发散度）</label><select id="w_style">${AI_STYLES.map(st=>`<option value="${st.id}" ${st.id===w.style?"selected":""}>${st.name} — ${st.desc}</option>`).join("")}</select></div>
     <div class="btnrow"><button class="btn" id="w_back">上一步</button><button class="btn primary" id="w_save">保存并启用</button></div>`;
@@ -2334,6 +2363,8 @@ function aiWizBind(){
   }else{
     el("w_back").addEventListener("click",()=>{w.step=3;aiWizRender();});
     el("w_style").addEventListener("change",e=>{w.style=e.target.value;});
+    const wc=el("w_web");
+    if(wc)wc.addEventListener("change",()=>{w.web=wc.checked;});
     el("w_save").addEventListener("click",aiWizSave);
   }
   _sheetSnap=sheetSnapshot(); // 每步重拍快照，避免触发「未保存」误判
@@ -2393,10 +2424,12 @@ async function aiWizTest(){
 function aiWizSave(){
   const w=_aiWiz, p=aiWizPreset();
   if(!w.testOk||!w.picked){toast("请先完成测试并选择模型");return;}
-  LLM_CFG={id:w.provider,name:p.name,base:(w.base||"").trim().replace(/\/+$/,""),key:(w.key||"").trim(),model:w.picked};
+  LLM_CFG={id:w.provider,name:p.name,base:(w.base||"").trim().replace(/\/+$/,""),key:(w.key||"").trim(),model:w.picked,web:!!w.web};
   aiStyle=w.style||"balanced";
   try{localStorage.setItem("wb_qiuzhao_aistyle",aiStyle)}catch(e){}
   aiSaveCfg();
+  aiRememberCfg(LLM_CFG);
+  aiRefreshTools();
   closeSheet(true);   // 已保存，跳过「未保存」二次确认
   $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
   toast("AI 已启用："+LLM_CFG.model);
@@ -2427,6 +2460,13 @@ const AI_SYSTEM=`你是「一页秋招」求职管理工具的智能助手，要
 - 建议要具体可执行：说"优先投 A 公司"而不是"要多投"。
 - 语气友好、口语化，像学长学姐，不说教、不啰嗦。
 
+【招聘 / 薪资 / 笔试类问题】
+- 用户问「某公司今年是否在招」「某岗位薪资行情」「笔试考什么」时，先交代信息来源，再说结论。
+- 若本次已开启联网检索：依据检索结果回答，注明来源与检索时间；不同渠道说法冲突就列出差异，不要假装确定。
+- 若未开启联网检索：明确说「我只能基于训练数据里的公开信息，无法确认今年的实时情况」，再给通用经验，并建议去官网/招聘平台核实。
+- 「官方笔试原题」基本不公开。绝不声称掌握官方原题；只能给公开面经里流传的题型与考点，并标注「非官方、网友回忆版，仅供参考」。
+- 不编造具体薪资数字、HC 数量、笔试题目；不确定就说不确定。
+
 【回答风格（重要，务必遵守）】
 - 精简第一：先说结论，再列要点。不要长篇大论、不要像写文章铺开所有细节。
 - 分析/报告类回答：用「一句话结论 + 2~5 条要点」的结构，每条一句话，不展开长篇说明。
@@ -2444,6 +2484,7 @@ function aiSystemPrompt(){
   // 注入全量数据概况，让 AI 有全局视野做主动分析
   const stats=aiGlobalStats();
   if(stats)extra+="\n\n【当前整体数据概况】"+stats;
+  if(LLM_CFG&&LLM_CFG.web)extra+="\n\n【联网检索状态】本次已开启联网检索，可以依据检索到的实时信息回答，并在结论后注明来源与时间。";
   const ctx=aiCtxData();
   if(ctx)extra+="\n\n【用户正在查看的页面数据】\n"+ctx;
   return AI_SYSTEM+extra;
@@ -2575,7 +2616,7 @@ async function aiCall(){
     const sys=aiSystemPrompt();
     // 第一段：非流式，稳妥拿 tool_calls（填表用低 temperature 保证准确）
     const r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
-      body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false,temperature:Math.min(aiTemp(),0.3)})});
+      body:JSON.stringify(Object.assign({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false,temperature:Math.min(aiTemp(),0.3)},aiWebParams()))});
     if(!r.ok){const j=await r.json().catch(()=>({}));const msg=(j.error&&j.error.message)||("HTTP "+r.status);throw new Error(msg);}
     const j=await r.json();
     const msg=j.choices&&j.choices[0]&&j.choices[0].message;
@@ -2600,7 +2641,7 @@ async function aiCall(){
       aiRenderPending();
       // 第二段：流式生成确认文案
       const r2=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
-        body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true,temperature:aiTemp()})});
+        body:JSON.stringify(Object.assign({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true,temperature:aiTemp()},aiWebParams()))});
       if(r2.ok&&r2.body){
         const acc=await aiReadStream(r2,()=>{});
         aiChat.push({role:"assistant",content:acc||"（已解析，请确认写入）"});
@@ -2705,53 +2746,60 @@ function aiRenderDoc(){
   area.innerHTML=aiPendingDoc?`<div class="ai-dochip">📄 ${esc(aiPendingDoc.name)}（${(aiPendingDoc.size/1024).toFixed(1)} KB）<button class="del" data-ai-doc-clear="1">✕</button></div>`:"";
 }
 
-/* 语音输入（浏览器自带 Web Speech API，零成本，需 HTTPS + 麦克风权限） */
-let _rec=null,_recOn=false;
-const AI_MIC_ERR={
-  "not-allowed":"麦克风权限被拒绝。请点地址栏左侧的锁/设置图标 → 把「麦克风」改为「允许」，再重试。\n（如果你是双击本地 HTML 文件打开的，浏览器禁止录音，请改用线上 HTTPS 地址）",
-  "service-not-allowed":"当前环境不允许语音服务。请用 HTTPS 线上地址打开（本地 file:// 不支持），并允许麦克风权限。",
-  "audio-capture":"没有检测到麦克风设备，请检查是否插好或系统里是否禁用。",
-  "no-speech":"没听到声音，靠近麦克风再说一次。",
-  "network":"语音识别需要联网，请检查网络后重试。",
-  "language-not-supported":"当前浏览器不支持中文语音识别。",
-  "aborted":""
-};
-function aiMicReset(){
-  _recOn=false;_rec=null;
-  const mic=$("#aiMic");if(mic){mic.style.background="";mic.textContent="🎤";}
+/* ===== 模型 / 响应风格 快速切换 ===== */
+const AI_LIST_KEY="wb_qiuzhao_llm_list";
+function aiLoadList(){try{const a=JSON.parse(localStorage.getItem(AI_LIST_KEY)||"[]");return Array.isArray(a)?a:[]}catch(e){return []}}
+function aiSaveList(a){try{localStorage.setItem(AI_LIST_KEY,JSON.stringify(a.slice(0,20)))}catch(e){}}
+function aiCfgKey(c){return [c&&c.id,c&&c.base,c&&c.model].join("|")}
+function aiRememberCfg(cfg){
+  if(!cfg||!cfg.model)return;
+  const list=aiLoadList();
+  const item={id:cfg.id,name:cfg.name,base:cfg.base,key:cfg.key,model:cfg.model};
+  const i=list.findIndex(x=>aiCfgKey(x)===aiCfgKey(item));
+  if(i>=0)list[i]=item;else list.unshift(item);
+  aiSaveList(list);
 }
-function aiToggleMic(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){aiErrMsg("当前浏览器不支持语音输入，请改用 Chrome / Edge。");return;}
-  if(_recOn){ if(_rec)_rec.stop(); return; }
-  // 本地文件打开时浏览器不给录音权限，提前说明，避免只看到 not-allowed
-  if(location.protocol==="file:"){
-    aiErrMsg(AI_MIC_ERR["not-allowed"]);
-    return;
+function aiStyleName(){const s=AI_STYLES.find(x=>x.id===aiStyle);return s?s.name:"平衡"}
+function aiRefreshTools(){
+  const mb=$("#aiModelBtn"), sb=$("#aiStyleBtn");
+  if(mb){
+    if(LLM_CFG&&LLM_CFG.model){mb.textContent=LLM_CFG.model;mb.classList.remove("muted");}
+    else{mb.textContent="未配置模型";mb.classList.add("muted");}
+    mb.title="当前模型："+(LLM_CFG&&LLM_CFG.model?LLM_CFG.model:"未配置")+"（点击切换）";
   }
-  const rec=new SR();
-  rec.lang="zh-CN";
-  rec.interimResults=true;
-  rec.continuous=false;
-  _rec=rec;_recOn=true;
-  const mic=$("#aiMic");
-  mic.style.background="var(--red-soft)";mic.textContent="🔴";
-  rec.onresult=(e)=>{
-    let t="";
-    for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;
-    const inp=$("#aiInput");
-    inp.value=inp.value?(inp.value+" "+t):t;
-    inp.focus();
-  };
-  rec.onend=aiMicReset;
-  rec.onerror=(e)=>{
-    aiMicReset();
-    const k=e&&e.error;
-    const msg=AI_MIC_ERR[k];
-    if(msg===undefined)aiErrMsg("语音识别出错："+(k||"未知"));
-    else if(msg)aiErrMsg(msg);
-  };
-  try{rec.start();}catch(err){aiMicReset();aiErrMsg("无法启动语音识别："+(err&&err.message||err));}
+  if(sb)sb.textContent=aiStyleName();
+}
+function aiModelSheet(){
+  const list=aiLoadList();
+  const cur=LLM_CFG?aiCfgKey(LLM_CFG):"";
+  const rows=list.map((c,i)=>{
+    const on=aiCfgKey(c)===cur;
+    const host=(c.base||"").replace(/^https?:\/\//,"").split("/")[0];
+    return `<div class="wiz-model ${on?"on":""}" data-pick="${i}"><span class="dot"></span><span style="min-width:0"><span style="display:block">${esc(c.model)}</span><span style="display:block;font-size:11px;color:var(--ink3);font-weight:400">${esc(c.name||"")} · ${esc(host)}</span></span></div>`;
+  }).join("");
+  openSheet(`<h3>切换模型<button class="x" onclick="closeSheet()">✕</button></h3>
+    ${rows?`<div class="wiz-models">${rows}</div>`:`<div class="empty"><b>还没有保存过模型</b>先用「设置」走一遍配置，之后这里可一键切换</div>`}
+    <div class="btnrow"><button class="btn primary" id="m_new">＋ 配置新模型</button></div>`);
+  document.querySelectorAll("#sheet [data-pick]").forEach(row=>{
+    row.addEventListener("click",()=>{
+      const c=list[+row.dataset.pick];
+      if(!c)return;
+      LLM_CFG={id:c.id,name:c.name,base:c.base,key:c.key,model:c.model,web:!!c.web};
+      aiSaveCfg();aiRefreshTools();closeSheet(true);
+      const cf=$("#aiCfg");if(cf)cf.textContent=aiReady()?((LLM_CFG.name||"模型")+" · "+LLM_CFG.model):"未配置";
+      toast("已切换到 "+c.model);
+    });
+  });
+  const nb=$("#m_new");
+  if(nb)nb.addEventListener("click",()=>{closeSheet(true);aiSetupForm();});
+}
+function aiStyleCycle(){
+  const i=Math.max(0,AI_STYLES.findIndex(x=>x.id===aiStyle));
+  const n=AI_STYLES[(i+1)%AI_STYLES.length];
+  aiStyle=n.id;
+  try{localStorage.setItem("wb_qiuzhao_aistyle",aiStyle)}catch(e){}
+  aiRefreshTools();
+  toast("响应风格："+n.name+" · "+n.desc);
 }
 
 /* AI 面板拖拽调整大小（桌面拖左侧改宽，手机拖顶部改高，记忆上次尺寸） */
@@ -2830,7 +2878,8 @@ $("#aiOverlay").addEventListener("click",e=>{if(e.target.id==="aiOverlay")aiClos
 $("#aiSetup").addEventListener("click",aiSetupForm);
 $("#aiAttach").addEventListener("click",()=>$("#aiFile").click());
 $("#aiFile").addEventListener("change",e=>aiFileChange(e.target));
-$("#aiMic").addEventListener("click",aiToggleMic);
+$("#aiModelBtn").addEventListener("click",aiModelSheet);
+$("#aiStyleBtn").addEventListener("click",aiStyleCycle);
 $("#aiSend").addEventListener("click",()=>{if(aiBusy){aiStop();}else{aiCall();}});
 $("#aiInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();if(aiBusy)aiStop();else aiCall();}});
 document.addEventListener("click",async e=>{
