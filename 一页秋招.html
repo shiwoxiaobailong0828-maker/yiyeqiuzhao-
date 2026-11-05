@@ -578,11 +578,21 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
     </ul>
     <h4>怎么配（四步）</h4>
     <ol class="li">
-      <li><b>准备一个接口</b>：一个能读写的网址即可，云函数（腾讯云/阿里云）、Cloudflare Worker、Vercel、自己的 NAS 或服务器都行</li>
+      <li><b>准备一个接口</b>：项目里已带现成的，两种任选——<br>
+        · <b>本机服务</b>（最快）：双击项目里 <code>云同步服务/启动云同步服务.bat</code>，会打印地址与令牌，同一 Wi-Fi 下手机也能用<br>
+        · <b>公网服务</b>：把 <code>云同步服务/cloudflare-worker.js</code> 部署到 Cloudflare（免费），手机在外面也能同步<br>
+        · 也可以自己写：云函数、Vercel、NAS 都行，接口约定见下</li>
       <li><b>打开配置</b>：顶栏「更多操作 → 云端同步」</li>
       <li><b>填两项</b>：云端地址（接口 URL）+ 访问令牌（自己定的一串密码，防止别人读你的数据）</li>
       <li><b>点「保存并测试」</b>：显示已连接即成功；换到另一台设备，填<b>同样的地址和令牌</b>，点「拉取云端数据」即可</li>
     </ol>
+    <h4>同步规则（不会互相覆盖）</h4>
+    <ul class="li">
+      <li>本地改动后约 1 秒<b>自动上传</b>，失败会自动重试</li>
+      <li>发现云端版本更新时，只在状态栏提示「<b>云端有更新</b>」，<b>不会</b>偷偷覆盖本机</li>
+      <li>只有你点「拉取云端数据」才会用云端覆盖本机</li>
+      <li>面板里能看到「上次同步时间 / 本机最后修改 / 是否有云端更新」</li>
+    </ul>
     <h4>接口约定（自己写后端时照这个来）</h4>
     <ul class="li amber">
       <li><b>GET 地址?token=xxx</b> → 返回 <code>{"data": {…全量数据…}}</code></li>
@@ -754,42 +764,79 @@ function refreshCloudBadge(){
   if(!el)return;
   const on=cloudOn();
   let txt="云端同步", cls=false;
-  if(on){ txt = _cloudState==="error" ? "本地已存·云端失败" : (_cloudState==="synced" ? "已同步云端" : (_cloudState==="syncing" ? "同步中…" : "已连云端")); cls=true; }
+  if(on){ txt = _cloudState==="error" ? "本地已存·云端失败" : (_cloudBehind ? "云端有更新" : (_cloudState==="synced" ? "已同步云端" : (_cloudState==="syncing" ? "同步中…" : "已连云端"))); cls=true; }
   else if(CLOUD&&CLOUD.endpoint){ txt="云端未授权"; cls=true; }
   el.textContent=txt;
+  if(on&&_cloudLastSync){
+    const d=new Date(_cloudLastSync);
+    const hh=String(d.getHours()).padStart(2,"0"), mm=String(d.getMinutes()).padStart(2,"0");
+    el.title="上次同步："+hh+":"+mm;
+  }
   $("#btnCloud").classList.toggle("on",cls);
   $("#btnCloud").classList.toggle("err",on&&_cloudState==="error");
 }
 // 校验云端返回的数据结构是否完整，避免用残缺数据覆盖本地
 function isFullData(d){return d&&Array.isArray(d.apps)&&Array.isArray(d.todos)&&Array.isArray(d.mt)}
+let _cloudLastSync=0;   // 上次成功同步的时间
+let _cloudBehind=false; // 云端比本机新（仅提示，不自动覆盖）
+let _lastSyncedRev=0;    // 上次成功同步时的版本号（用于判断云端是否真的变了）
 async function loadCloud(force){
   if(!cloudOn())return false;
   try{
     const r=await fetch(cloudURL(),{cache:"no-store"});
-    if(!r.ok)throw 0;
+    if(!r.ok)throw new Error("HTTP "+r.status);
     const j=await r.json().catch(()=>null);
-    if(!j||!j.data)throw 0;
+    if(!j)throw new Error("返回不是 JSON");
     const data=j.data;
-    const localRev=S.rev||0, cloudRev=data.rev||0;
+    const cloudRev=Number(j.rev||(data&&data.rev)||0);
+    const localRev=Number(S.rev||0);
     const hadLocal=isFullData(S);
-    if(!hadLocal || force){
-      if(isFullData(data)){
+
+    // 云端还没有数据：把本机传上去
+    if(!data){
+      if(hadLocal){ await saveCloud(true); }
+      _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
+      toast("云端还没有数据，已把本机数据上传");
+      return true;
+    }
+    if(!isFullData(data)){ toast("云端数据不完整，已忽略"); return false; }
+
+    // 本机没数据 or 用户主动点"拉取"：直接用云端
+    if(!hadLocal||force){
+      S=JSON.parse(JSON.stringify(BLANK));
+      Object.assign(S,data);
+      S.rev=cloudRev||Date.now(); S.savedAt=S.rev;
+      saveLocal(); renderAll();
+      _cloudBehind=false;_lastSyncedRev=cloudRev||S.rev;
+      _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
+      toast("已从云端拉取最新数据 ✓");
+      return true;
+    }
+
+    // 云端是否真的变了：以上次同步的版本号为基准精确比对，不依赖时钟容差
+    const cloudChanged = _lastSyncedRev ? (cloudRev !== _lastSyncedRev) : (cloudRev > localRev + 20);
+    if(cloudChanged){
+      if(force){
+        // 用户主动点「拉取云端数据」→ 直接用云端
         S=JSON.parse(JSON.stringify(BLANK));
         Object.assign(S,data);
-        S.rev=cloudRev||Date.now(); S.savedAt=S.rev;
-        saveLocal();
-        _cloudState="synced";refreshCloudBadge();
-        toast("已从云端恢复最新数据 ✓");
+        S.rev=cloudRev; S.savedAt=cloudRev;
+        saveLocal(); renderAll();
+        _cloudBehind=false;_lastSyncedRev=cloudRev;
+        _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
+        toast("已拉取云端最新数据 ✓");
         return true;
       }
-      return false;
+      // 自动检查时只提示，绝不悄悄覆盖本机
+      _cloudBehind=true;
+      _cloudState="synced";refreshCloudBadge();
+      return true;
     }
-    if(cloudRev<localRev){ await saveCloud(true); }
-    _cloudState="synced";refreshCloudBadge();
+    if(localRev>cloudRev+20){ await saveCloud(true); }
+    _cloudState="synced";_cloudLastSync=Date.now();refreshCloudBadge();
     return true;
   }catch(e){
-    if(isFullData(S)) _cloudState="synced";
-    refreshCloudBadge();
+    _cloudState="error";refreshCloudBadge();
     return false;
   }
 }
@@ -818,6 +865,7 @@ async function saveCloudChunked(payload){
   }
   const mr=await fetch(cloudURL()+"&action=save-merge",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,total})});
   if(!mr.ok)throw new Error("merge failed");
+  try{const jj=await mr.json(); if(jj&&jj.rev){S.rev=jj.rev;S.savedAt=jj.rev;saveLocal();}}catch(e){}
 }
 // 后台退避重试：页面还开着就持续补传，直到云端收到
 let _bgRetryTimer=null,_bgRetries=0;
@@ -840,14 +888,20 @@ async function saveCloud(silent){
     if(raw.length>90000){
       await saveCloudChunked(payload);
     }else{
-      let ok=false;
+      let ok=false,serverRev=0;
       for(let i=1;i<=3;i++){
-        try{ await postCloud(payload); ok=true; break; }
+        try{
+          const rs=await postCloud(payload);
+          try{const jj=await rs.json(); if(jj&&jj.rev)serverRev=jj.rev;}catch(e){}
+          ok=true; break;
+        }
         catch(e){ if(i<3) await new Promise(r=>setTimeout(r,500*i)); }
       }
       if(!ok)throw new Error("retry exhausted");
+      // 采用服务器时间戳，保证两端 rev 同一时钟，后续比较才准
+      if(serverRev){ S.rev=serverRev; S.savedAt=serverRev; saveLocal(); }
     }
-    _cloudState="synced";_bgRetries=0;
+    _cloudState="synced";_bgRetries=0;_cloudLastSync=Date.now();_cloudBehind=false;_lastSyncedRev=S.rev||0;
     if(!silent)toast("已保存到云端 ✓");
   }catch(e){
     _cloudState="error";
@@ -1761,7 +1815,7 @@ function moreForm(){
     1. 点上方「云端同步」← 会弹出配置窗口<br>
     2. 填两个东西：<b>云端地址</b>（你自己部署的接口 URL）+ <b>访问令牌</b>（自定义密码）<br>
     3. 点「保存并测试」，成功后手机和电脑各填同一个地址和令牌，即可互相拉取<br>
-    <span style="color:var(--ink3)">为什么需要自备？因为这是纯本地单文件应用，不经过任何第三方服务器，你的数据只走你自己的接口。详细步骤见「使用说明 → 云端同步」。</span>
+    <span style="color:var(--ink3)">项目里已经带了一个现成的服务：双击 <b>云同步服务/启动云同步服务.bat</b> 就能跑，终端会打印地址和令牌，直接填进来即可。完整说明见「使用说明 → 云端同步」。</span>
   </div>`);
 }
 function moreDo(k){
@@ -2058,12 +2112,19 @@ $("#btnReset").addEventListener("click",()=>{
 /* 云端同步配置 */
 function cloudForm(){
   const cfg=CLOUD||{};
-  const st=cloudOn()?(_cloudState==="error"?"⚠ 上次同步失败":(_cloudState==="synced"?"✓ 已同步":"已连接")):"未启用";
+  const st=cloudOn()?(_cloudBehind?"⚠ 云端有更新，建议拉取":(_cloudState==="error"?"⚠ 上次同步失败":(_cloudState==="synced"?"✓ 已同步":"已连接"))):"未启用";
+  const lastTxt=_cloudLastSync?(new Date(_cloudLastSync).toLocaleString()):"还没有同步过";
+  const localRevTxt=S&&S.rev?new Date(S.rev).toLocaleString():"无";
   openSheet(`<h3>云端同步<button class="x" onclick="closeSheet()">✕</button></h3>
   <div style="font-size:13px;line-height:1.7;color:var(--ink2);background:var(--blue-soft);padding:10px 12px;border-radius:12px;margin-bottom:12px"><b>多设备同步怎么用：</b>在手机和电脑都填<b>同一个地址 + 令牌</b>，即可互相拉取/上传数据。数据以<b>最后修改</b>为准，不会用旧数据覆盖新数据。</div>
   <div class="f-row"><label>云端地址（URL）</label><input id="c_ep" value="${esc(cfg.endpoint||"")}" placeholder="https://你的云端接口地址"></div>
   <div class="f-row"><label>访问令牌（token）</label><input id="c_tk" value="${esc(cfg.token||"")}" placeholder="云端接口分配的令牌"></div>
-  <div style="font-size:12px;color:var(--ink3);margin:4px 0 10px">当前状态：<b id="c_state">${st}</b>　｜　地址和令牌需要自己准备（云函数 / NAS / 私有服务器均可），填入后点「保存并测试」。</div>
+  <div style="font-size:12px;color:var(--ink3);margin:4px 0 10px">当前状态：<b id="c_state">${st}</b>　｜　地址和令牌需要自己准备（本机服务 / 云函数 / NAS 均可），填入后点「保存并测试」。</div>
+  <div style="font-size:12px;line-height:1.9;color:var(--ink2);background:var(--gray-soft);border-radius:10px;padding:9px 12px;margin-bottom:10px">
+    上次同步：<b>${lastTxt}</b><br>
+    本机最后修改：<b>${localRevTxt}</b><br>
+    ${_cloudBehind?'<span style="color:var(--orange)">⚠ 云端比本机新，点「拉取云端数据」可获取最新版本</span>':'同步正常，会自动在改动后上传'}
+  </div>
   <div class="btnrow" style="margin-bottom:10px">
     <button class="btn" id="c_pull">📥 拉取云端数据</button>
     <button class="btn" id="c_push">📤 上传到云端</button>
