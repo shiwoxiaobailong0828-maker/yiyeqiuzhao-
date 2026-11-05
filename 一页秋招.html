@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0a84ff">
-<title>秋招工作台 · 一页秋招</title>
+<title>秋招指挥舱 · 一页秋招</title>
 <style>
 :root{
   --bg:#f5f5f7; --card:#ffffff; --ink:#1d1d1f; --ink2:#6e6e73; --ink3:#aeaeb2;
@@ -227,6 +227,18 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
   @keyframes slideOut{from{transform:none}to{transform:translateX(100%)}}
 }
 @media (min-width:640px) and (max-width:759px){#aiOverlay{align-items:center}#aiPanel{border-radius:22px;height:78vh}}
+/* 面板可拖拽调整大小：手机拖顶部横条改高度，桌面拖左侧竖条改宽度 */
+#aiPanel{position:relative}
+.ai-resize{position:absolute;z-index:6;background:transparent;touch-action:none}
+.ai-resize::before{content:"";position:absolute;border-radius:3px;background:var(--ink3);opacity:.45;transition:opacity .15s,background .15s}
+.ai-resize:hover::before,.ai-resize.dragging::before{opacity:1;background:var(--blue)}
+.ai-resize{top:0;left:0;right:0;height:16px;cursor:row-resize}
+.ai-resize::before{top:5px;left:50%;transform:translateX(-50%);width:46px;height:4px}
+.ai-resize:hover,.ai-resize.dragging{background:rgba(0,122,255,.06)}
+@media (min-width:760px){
+  .ai-resize{top:0;left:0;bottom:0;right:auto;width:16px;height:auto;cursor:col-resize}
+  .ai-resize::before{top:50%;left:5px;transform:translateY(-50%);width:4px;height:46px}
+}
 .ai-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
 .ai-head h3{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
 .ai-head .cfg{font-size:12px;color:var(--ink3)}
@@ -274,7 +286,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 <div class="wrap">
 
 <header class="top">
-  <h1>秋招工作台</h1>
+  <h1>秋招指挥舱</h1>
   <div class="sub" id="profileLine"></div>
 </header>
 <div class="toolbar">
@@ -480,7 +492,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
   </div>
 </section>
 
-<footer>秋招工作台 ｜ 数据保存在本机浏览器 localStorage，不上传任何第三方 ｜ 建议定期「更多操作 → 导出备份」</footer>
+<footer>秋招指挥舱 ｜ 数据保存在本机浏览器 localStorage，不上传任何第三方 ｜ 建议定期「更多操作 → 导出备份」</footer>
 </div>
 
 <!-- 弹层 -->
@@ -490,6 +502,7 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 <!-- AI 助手 -->
 <div id="aiOverlay">
   <div id="aiPanel">
+    <div class="ai-resize" id="aiResize" title="拖动调整大小"></div>
     <div class="ai-head">
       <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>AI 助手</h3>
       <span class="cfg" id="aiCfg">未配置</span>
@@ -985,7 +998,7 @@ function renderProfile(){
   const has=parts.some(x=>x);
   const line=has?parts.filter(x=>x).join(" · ")+" ｜ 主攻："+(p.target||"待填写"):"未填写个人档案 —— 姓名 / 学校 / 专业 / 届别 / 主攻方向";
   $("#profileLine").innerHTML=`<span>${esc(line)}</span><button class="editSub" data-edit-profile="1">去设置</button>`;
-  document.title = (p.name?p.name+"的":"")+"秋招工作台";
+  document.title = (p.name?p.name+"的":"")+"秋招指挥舱";
 }
 function renderStats(){
   const total=S.apps.length;
@@ -1872,7 +1885,7 @@ $("#btnDemo").addEventListener("click",()=>{
 $("#btnExport").addEventListener("click",()=>{
   const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-  a.download="秋招工作台备份_"+TODAY+".json";a.click();URL.revokeObjectURL(a.href);toast("已导出备份");
+  a.download="秋招指挥舱备份_"+TODAY+".json";a.click();URL.revokeObjectURL(a.href);toast("已导出备份");
 });
 $("#btnICS").addEventListener("click",exportICS);
 $("#btnBulk").addEventListener("click",bulkImportForm);
@@ -1958,7 +1971,7 @@ document.addEventListener("click",async e=>{
     };
     let icons=[];
     try{icons=[{src:mk(192),sizes:"192x192",type:"image/png"},{src:mk(512),sizes:"512x512",type:"image/png"}];}catch(e){}
-    const manifest={name:"秋招工作台",short_name:"秋招工作台",description:"单文件秋招求职管理看板：投递、管道、目标、Offer、待办、简历版本",
+    const manifest={name:"秋招指挥舱",short_name:"秋招指挥舱",description:"单文件秋招求职管理看板：投递、管道、目标、Offer、待办、简历版本",
       start_url:location.href.split("#")[0],display:"standalone",background_color:"#f5f5f7",theme_color:"#0a84ff",
       icons:icons};
     const l=document.createElement("link");
@@ -2127,6 +2140,7 @@ function aiMakeApp(co,ti){
 function aiOpen(){
   if(!LLM_CFG){aiSetupForm();}
   $("#aiOverlay").classList.add("on");
+  if(window.__aiResizeApply)window.__aiResizeApply();
   $("#aiCfg").textContent=aiReady()?((LLM_CFG.name||"模型")+" · "+LLM_CFG.model):"未配置";
   aiLoadChat();
   aiRenderHistory();
@@ -2526,18 +2540,36 @@ function aiRenderDoc(){
   area.innerHTML=aiPendingDoc?`<div class="ai-dochip">📄 ${esc(aiPendingDoc.name)}（${(aiPendingDoc.size/1024).toFixed(1)} KB）<button class="del" data-ai-doc-clear="1">✕</button></div>`:"";
 }
 
-/* 语音输入（浏览器自带 Web Speech API，零成本，需联网，Chrome/Edge 支持好） */
+/* 语音输入（浏览器自带 Web Speech API，零成本，需 HTTPS + 麦克风权限） */
 let _rec=null,_recOn=false;
+const AI_MIC_ERR={
+  "not-allowed":"麦克风权限被拒绝。请点地址栏左侧的锁/设置图标 → 把「麦克风」改为「允许」，再重试。\n（如果你是双击本地 HTML 文件打开的，浏览器禁止录音，请改用线上 HTTPS 地址）",
+  "service-not-allowed":"当前环境不允许语音服务。请用 HTTPS 线上地址打开（本地 file:// 不支持），并允许麦克风权限。",
+  "audio-capture":"没有检测到麦克风设备，请检查是否插好或系统里是否禁用。",
+  "no-speech":"没听到声音，靠近麦克风再说一次。",
+  "network":"语音识别需要联网，请检查网络后重试。",
+  "language-not-supported":"当前浏览器不支持中文语音识别。",
+  "aborted":""
+};
+function aiMicReset(){
+  _recOn=false;_rec=null;
+  const mic=$("#aiMic");if(mic){mic.style.background="";mic.textContent="🎤";}
+}
 function aiToggleMic(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){aiErrMsg("当前浏览器不支持语音输入，请用 Chrome / Edge 打开。");return;}
-  const mic=$("#aiMic");
-  if(_recOn){ _rec.stop(); return; }
+  if(!SR){aiErrMsg("当前浏览器不支持语音输入，请改用 Chrome / Edge。");return;}
+  if(_recOn){ if(_rec)_rec.stop(); return; }
+  // 本地文件打开时浏览器不给录音权限，提前说明，避免只看到 not-allowed
+  if(location.protocol==="file:"){
+    aiErrMsg(AI_MIC_ERR["not-allowed"]);
+    return;
+  }
   const rec=new SR();
   rec.lang="zh-CN";
   rec.interimResults=true;
   rec.continuous=false;
   _rec=rec;_recOn=true;
+  const mic=$("#aiMic");
   mic.style.background="var(--red-soft)";mic.textContent="🔴";
   rec.onresult=(e)=>{
     let t="";
@@ -2546,10 +2578,78 @@ function aiToggleMic(){
     inp.value=inp.value?(inp.value+" "+t):t;
     inp.focus();
   };
-  rec.onend=()=>{_recOn=false;_rec=null;mic.style.background="";mic.textContent="🎤";};
-  rec.onerror=(e)=>{_recOn=false;_rec=null;mic.style.background="";mic.textContent="🎤";if(e.error!=="aborted"&&e.error!=="no-speech")aiErrMsg("语音识别出错："+e.error);};
-  try{rec.start();}catch(err){_recOn=false;_rec=null;mic.style.background="";mic.textContent="🎤";}
+  rec.onend=aiMicReset;
+  rec.onerror=(e)=>{
+    aiMicReset();
+    const k=e&&e.error;
+    const msg=AI_MIC_ERR[k];
+    if(msg===undefined)aiErrMsg("语音识别出错："+(k||"未知"));
+    else if(msg)aiErrMsg(msg);
+  };
+  try{rec.start();}catch(err){aiMicReset();aiErrMsg("无法启动语音识别："+(err&&err.message||err));}
 }
+
+/* AI 面板拖拽调整大小（桌面拖左侧改宽，手机拖顶部改高，记忆上次尺寸） */
+(function initAiResize(){
+  const p=$("#aiPanel"), handle=$("#aiResize");
+  if(!p||!handle)return;
+  const isDesktop=()=>{
+    try{
+      if(typeof window.matchMedia==="function")return window.matchMedia("(min-width:760px)").matches;
+    }catch(_){}
+    return window.innerWidth>=760;
+  };
+  const lsGet=k=>{try{return localStorage.getItem(k)}catch(_){return null}};
+  const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
+  const apply=()=>{
+    try{
+      if(isDesktop()){
+        const w=parseInt(lsGet("wb_qiuzhao_aiw")||"0",10);
+        p.style.width=w>0?w+"px":"";
+        p.style.maxWidth=w>0?"none":"";
+        p.style.height="";
+      }else{
+        const hh=parseInt(lsGet("wb_qiuzhao_aih")||"0",10);
+        p.style.height=hh>0?hh+"px":"";
+        p.style.width="";p.style.maxWidth="";
+      }
+    }catch(_){}
+  };
+  let dragging=false,sx=0,sy=0,sw=0,sh=0;
+  handle.addEventListener("pointerdown",e=>{
+    dragging=true;handle.classList.add("dragging");
+    try{handle.setPointerCapture(e.pointerId);}catch(_){}
+    const r=p.getBoundingClientRect();
+    sx=e.clientX;sy=e.clientY;sw=r.width;sh=r.height;
+    e.preventDefault();
+  });
+  handle.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    if(isDesktop()){
+      const w=Math.max(300,Math.min(window.innerWidth-40,sw+(sx-e.clientX)));
+      p.style.width=w+"px";p.style.maxWidth="none";
+    }else{
+      const hh=Math.max(260,Math.min(window.innerHeight-24,sh+(sy-e.clientY)));
+      p.style.height=hh+"px";
+    }
+  });
+  const end=e=>{
+    if(!dragging)return;
+    dragging=false;handle.classList.remove("dragging");
+    try{handle.releasePointerCapture(e.pointerId);}catch(_){}
+    if(isDesktop()){
+      const w=parseInt(p.style.width||"0",10);
+      if(w>0)lsSet("wb_qiuzhao_aiw",w);
+    }else{
+      const hh=parseInt(p.style.height||"0",10);
+      if(hh>0)lsSet("wb_qiuzhao_aih",hh);
+    }
+  };
+  handle.addEventListener("pointerup",end);
+  handle.addEventListener("pointercancel",end);
+  window.addEventListener("resize",apply);
+  window.__aiResizeApply=apply;
+})();
 
 /* 事件绑定 */
 $("#btnAI").addEventListener("click",()=>{aiCtx=null;aiOpen()});
