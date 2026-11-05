@@ -2031,14 +2031,24 @@ const AI_TOOLS=[
     parameters:{type:"object",properties:{
       name:{type:"string"},school:{type:"string"},major:{type:"string"},degree:{type:"string"},target:{type:"string"}
     }}}},
-  {type:"function",function:{name:"list_data",description:"查询当前已记录的数据（投递数、Offer、待办、目标等）",
-    parameters:{type:"object",properties:{}}}}
+  {type:"function",function:{name:"list_data",description:"查询当前已记录的数据（投递数、Offer、待办、目标等），用于分析或回答用户提问",
+    parameters:{type:"object",properties:{}}}},
+  {type:"function",function:{name:"coach_interview",description:"针对某公司某岗位的面试提供辅导：生成答题思路、STAR 故事框架、高频考点、追问预判。不写入数据，仅返回文字建议",
+    parameters:{type:"object",properties:{
+      co:{type:"string",description:"公司名（可选）"},ti:{type:"string",description:"岗位名（可选）"},
+      topic:{type:"string",description:"想准备的话题/问题，如自我介绍、职业规划、某段经历"}
+    },required:["topic"]}}}
 ];
 
 /* 工具执行器：只产出「待确认项」，不直接落盘 */
 function aiRunTool(name,args){
   switch(name){
-    case "add_application": return {label:"新增投递「"+args.co+" · "+(args.ti||"")+"」", apply:()=>{S.apps.push({id:uid(),co:args.co||"未命名公司",ti:args.ti||"未命名岗位",nat:args.nat||"校招",date:args.date||TODAY,ch:args.ch||"",url:args.url||"",stage:args.stage||"已投递",terminal:null,note:args.note||"AI 录入",upd:TODAY,history:[{d:TODAY,stage:args.stage||"已投递",note:"AI 录入"}]});}};
+    case "add_application": {
+      // 智能纠错：检测重复投递
+      const dup=aiFindApp(args.co,args.ti);
+      const dupWarn=dup?("（⚠️ 已存在同公司岗位「"+dup.co+"·"+dup.ti+"」，可能重复）"):"";
+      return {label:"新增投递「"+args.co+" · "+(args.ti||"")+"」"+dupWarn, apply:()=>{S.apps.push({id:uid(),co:args.co||"未命名公司",ti:args.ti||"未命名岗位",nat:args.nat||"校招",date:args.date||TODAY,ch:args.ch||"",url:args.url||"",stage:args.stage||"已投递",terminal:null,note:args.note||"AI 录入",upd:TODAY,history:[{d:TODAY,stage:args.stage||"已投递",note:"AI 录入"}]});}};
+    }
     case "add_interview": {
       return {label:"添加面试记录「"+args.co+" · "+args.round+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.interviews=a.interviews||[];a.interviews.push({round:args.round||"面试",date:args.date||TODAY,form:args.form||"",questions:args.questions||"",review:args.review||""});}};
     }
@@ -2050,8 +2060,23 @@ function aiRunTool(name,args){
     case "add_todo": return {label:"新增待办「"+args.t+"」", apply:()=>{S.todos.push({id:uid(),p:args.p||"P2",t:args.t,d:args.d||"",w:args.w||"",done:false});}};
     case "set_profile": return {label:"更新个人档案", apply:()=>{const p=S.profile||{};Object.keys(args).forEach(k=>{if(args[k])p[k]=args[k]});S.profile=p;}};
     case "list_data": {
-      const txt="当前记录：投递 "+S.apps.length+" 笔"+(S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length?"（Offer "+S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length+" 个）":"")+"；目标岗位 "+S.mt.length+" 个；待办 "+S.todos.filter(t=>!t.done).length+" 条未完成。";
+      const appS=S.apps.map(a=>{
+        const iv=a.interviews&&a.interviews.length?a.interviews.length+" 轮":"";
+        const off=a.offer?"有 Offer":"";
+        return a.co+(a.ti?"·"+a.ti:"")+"["+(a.terminal||a.stage)+"]"+iv+off;
+      }).join("；");
+      const mtS=S.mt.map(m=>m.p+" "+m.co+(m.dl?"(截止"+m.dl+")":"")).join("；");
+      const todoS=S.todos.filter(t=>!t.done).map(t=>t.p+" "+t.t).join("；");
+      let txt="";
+      txt+="投递记录："+(appS||"无")+"。\n";
+      txt+="目标岗位："+(mtS||"无")+"。\n";
+      txt+="待办："+(todoS||"无")+"。";
       return {label:"查询数据", apply:null, reply:txt};
+    }
+    case "coach_interview": {
+      // 不写数据，返回一个提示让 AI 基于岗位背景做辅导；实际辅导文字由 AI 直接生成
+      const bg=(args.co?args.co:"")+(args.ti?" "+args.ti:"")+(args.topic?"，话题："+args.topic:"");
+      return {label:"面试辅导", apply:null, reply:"请针对「"+bg+"」给出面试辅导：若涉及具体岗位，可结合用户已记录的该岗位面试题；给出答题思路（可用 STAR 法）、高频追问预判、以及一个具体示例。语气像学长学姐，实用不啰嗦。"};
     }
     default: return {label:name, apply:null};
   }
@@ -2130,17 +2155,61 @@ function aiSetupForm(){
   _sheetSnap=sheetSnapshot(); // 自动填充完成后重拍快照，避免触发「未保存」误判
 }
 
-const AI_SYSTEM=`你是「一页秋招」求职管理工具的助手。用户会口述面试经历、Offer 待遇、投递安排等，你要调用 tools 把这些信息结构化并写入对应板块。原则：1) 能写成结构化数据的就调用工具，不要只回复文字；2) 字段缺失就用空或合理默认，不要编造；3) 阶段值只能用枚举里的；4) 面试问题按题拆成多行；5) 如果只是问答，用 list_data 查询后回答。6) 当用户发送一段 Markdown 文档时，要逐条解析文档里的秋招信息，尽可能多地调用工具导入对应板块（一条投递调一次 add_application、一轮面试调一次 add_interview、一个 Offer 调一次 set_offer），不要只做总结概括。`;
-/* 动态 system：注入现有公司/岗位清单，让 AI 优先匹配已有记录而非重复新建 */
+const AI_SYSTEM=`你是「一页秋招」求职管理工具的智能助手，要像一个熟悉秋招的学长/学姐一样主动、贴心、聪明。
+
+【你的四大能力】
+1. 结构化填表：用户口述面试经历、Offer 待遇、投递安排时，调用 tools 把信息结构化写入对应板块。
+2. 主动分析给建议：当用户让你分析、或数据有明显问题（如某岗位卡太久、Offer 待遇有坑、渠道回音率低）时，要主动指出并给出可执行的建议。
+3. 智能纠错：写入前检查——公司/岗位是否已存在（避免重复）、日期格式是否合法、阶段是否合理、待遇数字是否异常。发现问题先提醒再写。
+4. 面试辅导：用户问到面试准备、答题思路时，用 coach_interview 工具或直接给结构化建议（STAR 法、高频考点、追问预判）。
+
+【填表原则】
+- 能写成结构化数据的就调用工具，不要只回复文字。
+- 字段缺失就用空或合理默认，不要编造数字。
+- 阶段值只能用枚举里的（已投递/筛选中/AI面试/笔试/复试/终试/Offer/拒绝/放弃）。
+- 面试问题按题拆成多行，复盘写具体。
+- 当用户发送文档（Markdown/TXT/JSON/CSV 等），逐条解析并尽可能多调用工具导入，不要只总结。
+
+【多轮记忆】
+- 记住对话上下文，用户追问"那个公司呢""改成复试"等省略说法时，结合上文推断指代。
+- 结合页面注入的数据和已有记录，回答要具体到"你现在的实际数据"，而不是泛泛而谈。
+
+【分析建议的原则】
+- 分析要基于真实数据（注入的页面数据 + list_data 查询结果），不要凭空编造。
+- 建议要具体可执行：说"优先投 A 公司"而不是"要多投"。
+- 语气友好、口语化，像学长学姐，不说教、不啰嗦。`;
+
+/* 动态 system：注入现有公司/岗位清单 + 页面数据，让 AI 优先匹配已有记录而非重复新建 */
 function aiSystemPrompt(){
   let extra="";
   if(S.apps.length){
-    const list=S.apps.slice(0,30).map(a=>a.co+(a.ti?"（"+a.ti+"）":"")).join("、");
-    extra="\n\n用户已记录的投递公司/岗位有："+list+"。当你需要给已有公司添加面试、Offer、更新阶段时，co 字段尽量用与上面一致的名称，不要另起一个相似的新公司名。";
+    const list=S.apps.slice(0,40).map(a=>a.co+(a.ti?"（"+a.ti+"）":"")).join("、");
+    extra+="\n\n【用户已记录的公司/岗位】"+list+"。给已有公司加面试/Offer/改阶段时，co 字段用与上面一致的名称，不要新建相似公司。";
   }
+  // 注入全量数据概况，让 AI 有全局视野做主动分析
+  const stats=aiGlobalStats();
+  if(stats)extra+="\n\n【当前整体数据概况】"+stats;
   const ctx=aiCtxData();
-  if(ctx)extra+="\n\n当前用户正在查看的页面数据如下，请优先基于这份数据回答或分析：\n"+ctx;
+  if(ctx)extra+="\n\n【用户正在查看的页面数据】\n"+ctx;
   return AI_SYSTEM+extra;
+}
+
+/* 全量数据概况（供 AI 主动分析用） */
+function aiGlobalStats(){
+  if(!S.apps.length&&!S.mt.length&&!S.todos.length)return "";
+  const total=S.apps.length;
+  const active=S.apps.filter(a=>!a.terminal).length;
+  const offer=S.apps.filter(a=>!a.terminal&&a.stage==="Offer").length;
+  const reject=S.apps.filter(a=>a.terminal==="拒绝").length;
+  const giveup=S.apps.filter(a=>a.terminal==="放弃").length;
+  const stale=S.apps.filter(a=>!a.terminal&&a.stage!=="Offer"&&(Date.now()-Date.parse(a.upd||TODAY))>30*86400000).length;
+  const todo=S.todos.filter(t=>!t.done).length;
+  const target=S.mt.length;
+  const parts=[];
+  parts.push("投递 "+total+" 笔（进行中 "+active+"、Offer "+offer+"、拒绝 "+reject+"、放弃 "+giveup+"）");
+  if(stale)parts.push("凉投（30天未更新）"+stale+" 笔");
+  parts.push("目标岗位 "+target+" 个、待办 "+todo+" 条");
+  return parts.join("；")+"。";
 }
 /* 生成当前面板数据摘要（供 AI 分析） */
 function aiCtxData(){
@@ -2196,6 +2265,27 @@ function aiSanitizeChat(){
   }
 }
 
+/* 带超时的 fetch：超时/网络错误自动重试一次，仍失败才抛错 */
+async function aiFetch(url,opts,retries=1){
+  let lastErr=null;
+  for(let i=0;i<=retries;i++){
+    const ctrl=new AbortController();
+    const tm=setTimeout(()=>ctrl.abort(),60000); // 60 秒超时
+    try{
+      const merged={...opts,signal:opts.signal||ctrl.signal};
+      const r=await fetch(url,merged);
+      return r;
+    }catch(e){
+      lastErr=e;
+      if(e.name==="AbortError"&&opts.signal&&opts.signal.aborted)throw e; // 用户主动中断，不重试
+      if(i>=retries)throw e;
+    }finally{
+      clearTimeout(tm);
+    }
+  }
+  throw lastErr;
+}
+
 /* 请求模型：流式输出 + 支持中断；工具调用阶段用非流式 */
 async function aiCall(){
   if(aiBusy){aiErrMsg("正在处理上一条，请稍候。");return;}
@@ -2229,7 +2319,7 @@ async function aiCall(){
     const url=LLM_CFG.base.replace(/\/$/,"")+"/chat/completions";
     const sys=aiSystemPrompt();
     // 第一段：非流式，稳妥拿 tool_calls
-    const r=await fetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+    const r=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
       body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),tools:AI_TOOLS,tool_choice:"auto",stream:false})});
     if(!r.ok){const j=await r.json().catch(()=>({}));const msg=(j.error&&j.error.message)||("HTTP "+r.status);throw new Error(msg);}
     const j=await r.json();
@@ -2254,7 +2344,7 @@ async function aiCall(){
       aiChat.push(...toolMsgs);aiSaveChat();
       aiRenderPending();
       // 第二段：流式生成确认文案
-      const r2=await fetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
+      const r2=await aiFetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
         body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true})});
       if(r2.ok&&r2.body){
         const acc=await aiReadStream(r2,()=>{});
