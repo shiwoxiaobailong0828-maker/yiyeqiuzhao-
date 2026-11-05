@@ -233,6 +233,10 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
 .ai-attach{flex:none;border:none;background:var(--gray-soft);border-radius:12px;width:44px;min-height:44px;font-size:17px;cursor:pointer}
 .ai-dochip{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--blue-soft);border-radius:10px;font-size:12px;color:var(--blue);margin-bottom:6px}
 .ai-dochip .del{border:none;background:none;color:var(--ink3);cursor:pointer;font-size:14px}
+/* 右侧常驻悬浮 AI 按钮 */
+#aiFab{position:fixed;right:18px;bottom:84px;z-index:94;width:52px;height:52px;border-radius:50%;border:none;background:linear-gradient(135deg,#0a84ff,#5e5ce6);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(10,132,255,.35);transition:transform .18s}
+#aiFab:hover{transform:scale(1.08)}
+#aiFab:active{transform:scale(.95)}
 </style>
 </head>
 <body>
@@ -489,13 +493,18 @@ footer{color:var(--ink3);font-size:12px;text-align:center;padding:26px 0 10px}
     <div id="aiDocArea" style="padding:0 16px"></div>
     <div class="ai-foot">
       <button class="btn small" id="aiSetup" style="min-height:44px;border-radius:14px">设置</button>
-      <button class="ai-attach" id="aiAttach" title="上传 Markdown 文档">📎</button>
-      <input type="file" id="aiFile" accept=".md,.markdown,text/markdown,text/plain" hidden>
+      <button class="ai-attach" id="aiAttach" title="上传文档（md/txt/json/csv 等）">📎</button>
+      <input type="file" id="aiFile" accept=".md,.markdown,.txt,.json,.csv,.tsv,.html,.htm,text/markdown,text/plain,application/json,text/csv" hidden>
       <textarea id="aiInput" placeholder="例如：今天面了腾讯的产品岗，一面问了自我介绍和职业规划，我职业规划答得不好…" rows="1"></textarea>
       <button class="send" id="aiSend">发送</button>
     </div>
   </div>
 </div>
+
+<!-- 右侧常驻悬浮 AI 按钮 -->
+<button id="aiFab" title="AI 助手" aria-label="打开 AI 助手">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.9 2.6L22.5 18.5l-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>
+</button>
 
 <script>
 /* ================= 阶段定义 ================= */
@@ -1965,7 +1974,17 @@ function aiSaveCfg(){try{localStorage.setItem(LLM_KEY,JSON.stringify(LLM_CFG))}c
 function aiReady(){return !!(LLM_CFG&&LLM_CFG.base&&LLM_CFG.key&&LLM_CFG.model)}
 
 /* 会话历史持久化（刷新后保留多轮上下文） */
-function aiSaveChat(){try{localStorage.setItem("wb_qiuzhao_aichat",JSON.stringify(aiChat.slice(-40)))}catch(e){}}
+function aiSaveChat(){
+  try{
+    let arr=aiChat;
+    // 轮次对齐：从最后一个 user 消息开始保留，保证 tool 消息有配对，避免截断产生孤儿 tool
+    let cut=0;
+    for(let i=arr.length-1;i>=0;i--){if(arr[i].role==="user"){cut=i;break;}}
+    let keep=arr.slice(cut);
+    if(keep.length>40)keep=keep.slice(-40);
+    localStorage.setItem("wb_qiuzhao_aichat",JSON.stringify(keep));
+  }catch(e){}
+}
 function aiLoadChat(){try{const c=JSON.parse(localStorage.getItem("wb_qiuzhao_aichat")||"[]");if(Array.isArray(c))aiChat=c.filter(m=>m&&m.role&&(m.content||m.tool_calls));}catch(e){aiChat=[]}}
 function aiClearChat(){aiChat=[];try{localStorage.removeItem("wb_qiuzhao_aichat")}catch(e){}}
 
@@ -2025,7 +2044,7 @@ function aiRunTool(name,args){
     }
     case "set_offer": {
       const off={structure:args.structure||"",monthly:args.monthly||"",months:args.months||"",social:args.social||"",probation:args.probation||"",location:args.location||"",worktime:args.worktime||"",holiday:args.holiday||"",benefits:args.benefits||""};
-      return {label:"设置 Offer 待遇「"+args.co+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.offer=off;}};
+      return {label:"设置 Offer 待遇「"+args.co+"」", apply:()=>{const a=aiFindApp(args.co,args.ti)||aiMakeApp(args.co,args.ti);a.offer=off;a.stage="Offer";a.terminal=null;a.upd=TODAY;a.history=a.history||[];a.history.push({d:TODAY,stage:"Offer",note:"AI 录入 Offer"});}};
     }
     case "add_target": return {label:"新增目标岗位「"+args.co+"」", apply:()=>{S.mt.push({id:uid(),p:args.p||"P2",co:args.co,dir:args.dir||"",major:args.major||"不限专业",city:args.city||"",time:args.time||"",dl:args.dl||"",act:args.act||""});}};
     case "add_todo": return {label:"新增待办「"+args.t+"」", apply:()=>{S.todos.push({id:uid(),p:args.p||"P2",t:args.t,d:args.d||"",w:args.w||"",done:false});}};
@@ -2069,6 +2088,7 @@ function aiRenderHistory(){
     if(m.role==="user")b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(m.content||"")}</div>`);
     else if(m.role==="assistant"&&m.content)b.insertAdjacentHTML("beforeend",`<div class="ai-msg bot">${esc(m.content)}</div>`);
   });
+  aiRenderPending(); // 恢复待确认预览
   b.scrollTop=b.scrollHeight;
 }
 function aiUserMsg(t){const b=$("#aiBody");b.insertAdjacentHTML("beforeend",`<div class="ai-msg user">${esc(t)}</div>`);b.scrollTop=b.scrollHeight}
@@ -2092,7 +2112,7 @@ function aiConfirmWrite(){
   let wrote=0;
   picks.forEach(p=>{if(p.apply){p.apply();wrote++;}});
   aiPending=null;
-  if(wrote){save(true);renderAll();aiBotMsg("已写入 "+wrote+" 条记录，对应板块已更新。"+wrote+" 处");}
+  if(wrote){save(true);renderAll();aiBotMsg("已写入 "+wrote+" 条记录，对应板块已更新。");}
   else aiBotMsg("未写入任何内容。");
 }
 function aiSetupForm(){
@@ -2139,11 +2159,26 @@ function aiCtxData(){
       return a.co+(a.ti?" · "+a.ti:"")+"："+["月薪 "+o.monthly,"几薪 "+o.months,"五险一金 "+o.social,"试用期 "+o.probation,"地点 "+o.location,"工时 "+o.worktime,"福利 "+o.benefits].filter(x=>x&&x.indexOf("undefined")<0&&x.split(" ").length>1).join("；");
     }).join("\n");
   }
+  if(aiCtx==="applied"){
+    if(!S.apps.length)return "";
+    return "【投递记录】\n"+S.apps.slice(0,20).map(a=>{
+      return a.co+(a.ti?" · "+a.ti:"")+"："+(a.terminal||a.stage)+((a.note||a.ch)?("（"+(a.ch||"")+(a.note?" "+a.note:"")+"）"):"");
+    }).join("\n");
+  }
+  if(aiCtx==="todo"){
+    const todos=S.todos.filter(t=>!t.done);
+    if(!todos.length)return "";
+    return "【待办事项】\n"+todos.slice(0,20).map(t=>t.p+" "+t.t+(t.d?"（"+t.d+"）":"")).join("\n");
+  }
   return "";
 }
 
 /* 防御性清理：保证历史里 tool_calls 与 tool 消息成对，剔除残缺记录 */
 function aiSanitizeChat(){
+  // 剔除开头无配对的孤儿 tool 消息（历史截断残留防御）
+  let k=0;
+  while(k<aiChat.length&&aiChat[k].role==="tool")k++;
+  if(k>0)aiChat=aiChat.slice(k);
   // 从后往前找，若最后一条是含 tool_calls 的 assistant 且其后无对应 tool 消息，则视为残缺
   const arr=aiChat;
   // 找到最后一个含 tool_calls 的 assistant 消息
@@ -2166,23 +2201,29 @@ async function aiCall(){
   if(aiBusy){aiErrMsg("正在处理上一条，请稍候。");return;}
   if(!aiReady()){aiErrMsg("请先点「设置」配置模型与 API Key");return;}
   aiSanitizeChat();
-  // 文档优先：有已载入的 Markdown 文档则发文档
+  // 文档优先：有已载入的文档则发文档
   let text="";
+  let isDoc=false,docRef=null;
   if(aiPendingDoc){
-    const doc=aiPendingDoc;
+    isDoc=true;docRef=aiPendingDoc;
+    const doc=docRef;
     if(doc.text.length>100*1024){aiErrMsg("文档过大（超 100KB），请分段导入。");return;}
-    text="请解析下面这份 Markdown 文档，把其中的秋招信息逐条导入对应板块：\n\n"+doc.text;
+    text="请解析下面这份文档，把其中的秋招信息逐条导入对应板块：\n\n"+doc.text;
     aiUserMsg("📄 "+doc.name+"（已发送，等待解析导入）");
     aiClearDoc();
   }else{
     text=$("#aiInput").value.trim();if(!text)return;
     aiUserMsg(text);$("#aiInput").value="";
   }
+  // 清理上一轮待确认项 + 记录本轮快照（失败回滚用）
+  aiPending=null;
+  const pv0=document.querySelector(".ai-preview");if(pv0)pv0.remove();
+  const baseLen=aiChat.length;
   aiLastInput=text;
   aiChat.push({role:"user",content:text});
   aiSaveChat();
   aiBusy=true;aiAbort=new AbortController();
-  $("#aiSend").disabled=true;$("#aiSend").textContent="停止";
+  $("#aiSend").textContent="停止"; // 不 disabled，保证「停止」可点击
   const done=aiTyping();
   try{
     const url=LLM_CFG.base.replace(/\/$/,"")+"/chat/completions";
@@ -2216,7 +2257,12 @@ async function aiCall(){
       const r2=await fetch(url,{method:"POST",signal:aiAbort.signal,headers:{"Content-Type":"application/json","Authorization":"Bearer "+LLM_CFG.key},
         body:JSON.stringify({model:LLM_CFG.model,messages:[{role:"system",content:sys}].concat(aiChat),stream:true})});
       if(r2.ok&&r2.body){
-        await aiReadStream(r2,()=>{const m2={role:"assistant",content:"（已解析，请确认写入）"};aiChat.push(m2);aiSaveChat();});
+        const acc=await aiReadStream(r2,()=>{});
+        aiChat.push({role:"assistant",content:acc||"（已解析，请确认写入）"});
+        aiSaveChat();
+      }else if(!r2.ok){
+        const j2=await r2.json().catch(()=>({}));
+        throw new Error((j2.error&&j2.error.message)||("HTTP "+r2.status));
       }else{
         aiBotMsg("已解析出内容，请在下方确认后写入。");
       }
@@ -2231,15 +2277,18 @@ async function aiCall(){
       const m=String(e.message||e);
       if(m==="Failed to fetch"||/NetworkError|TypeError/i.test(m))aiErrMsg("请求失败：该厂商可能不支持浏览器直连（CORS），或网络不可用。请换 DeepSeek/通义/智谱等国产模型，或用「自定义」填中转地址。");
       else aiErrMsg("调用失败："+m);
-      // 失败重试：撤销刚 push 的用户消息，避免重发时重复；把原文放回输入框
-      const last=aiChat[aiChat.length-1];
-      if(last&&last.role==="user")aiChat.pop();
+      // 失败回滚：撤销本轮 push 的所有消息，清空待确认，移除预览
+      aiChat.length=baseLen;
+      aiPending=null;
+      const pv=document.querySelector(".ai-preview");if(pv)pv.remove();
       aiSaveChat();
-      if(aiLastInput){$("#aiInput").value=aiLastInput;}
+      // 文档模式恢复待发送文档；普通模式原文放回输入框
+      if(isDoc&&docRef){aiPendingDoc=docRef;aiRenderDoc();}
+      else if(aiLastInput){$("#aiInput").value=aiLastInput;}
     }
   }finally{
     done();aiBusy=false;aiAbort=null;
-    $("#aiSend").disabled=false;$("#aiSend").textContent="发送";
+    $("#aiSend").textContent="发送";
   }
 }
 /* 读 SSE 流，逐段渲染 */
@@ -2262,7 +2311,14 @@ async function aiReadStream(res,onEmpty){
         try{const o=JSON.parse(data);const d=o.choices&&o.choices[0]&&o.choices[0].delta;if(d&&d.content){acc+=d.content;aiStreamAppend(sid,d.content);}}catch(e){}
       }
     }
-  }catch(e){}
+    // 尾部 flush：处理 buf 里最后一行无 \n 的 data 事件
+    const tail=buf.trim();
+    if(tail.startsWith("data:")&&tail.slice(5).trim()!=="[DONE]"){
+      try{const o=JSON.parse(tail.slice(5).trim());const d=o.choices&&o.choices[0]&&o.choices[0].delta;if(d&&d.content){acc+=d.content;aiStreamAppend(sid,d.content);}}catch(e){}
+    }
+  }catch(e){
+    if(e&&e.name==="AbortError")throw e; // 中断向上抛，交给 aiCall 统一处理，不误触 onEmpty
+  }
   if(!acc)onEmpty();
   return acc;
 }
@@ -2272,14 +2328,16 @@ function aiStop(){if(aiAbort)aiAbort.abort();}
 /* 面板入口：设置上下文并打开浮窗 */
 function aiOpenCtx(type){
   aiCtx=type;
-  const name=type==="screen"?"岗位筛选":(type==="offer"?"Offer 对比":"");
+  const names={applied:"投递岗位",progress:"投递进度",screen:"筛选岗位",offer:"Offer 对比",todo:"待办事项",about:"使用说明"};
+  const name=names[type]||"当前页面";
   aiOpen();
   const data=aiCtxData();
-  if(data)aiBotMsg("已加载当前「"+name+"」数据，你可以直接问，例如：\n· 哪个目标最该优先投？\n· 这些 Offer 综合来看哪个更划算？");
+  if(data)aiBotMsg("已加载当前「"+name+"」数据，你可以直接问，例如：\n· 帮我分析一下目前的进度和风险\n· 下一步最该做什么？");
+  else if(type==="about"||type==="progress")aiBotMsg("当前在「"+name+"」页。你可以问任何秋招相关的问题，或让我帮你分析整体数据。");
   else aiBotMsg("当前「"+name+"」还没有数据，先去填一些再回来问吧。");
 }
 
-/* Markdown 文档：选择文件并读取 */
+/* 文档：选择文件并读取（支持 md/txt/json/csv/html 等文本格式） */
 function aiFileChange(input){
   const f=input.files&&input.files[0];
   if(!f)return;
@@ -2304,6 +2362,12 @@ function aiRenderDoc(){
 
 /* 事件绑定 */
 $("#btnAI").addEventListener("click",()=>{aiCtx=null;aiOpen()});
+/* 右侧悬浮按钮：读取当前面板并打开 AI */
+$("#aiFab").addEventListener("click",()=>{
+  const cur=document.querySelector("nav.tabs button.on");
+  const k=cur?cur.dataset.k:"applied";
+  aiOpenCtx(k);
+});
 $("#aiClose").addEventListener("click",aiClose);
 $("#aiClear").addEventListener("click",()=>{if(!confirm("清空当前对话？"))return;aiClearChat();aiRenderHistory();aiBotMsg("对话已清空，重新开始吧。");});
 $("#aiOverlay").addEventListener("click",e=>{if(e.target.id==="aiOverlay")aiClose()});
