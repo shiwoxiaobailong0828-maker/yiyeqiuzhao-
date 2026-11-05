@@ -617,6 +617,64 @@ http.createServer((req,res)=>{
     <div class="small" style="margin-top:6px">提示：接口必须是 <b>https</b>（或本机 localhost），否则浏览器会拦截。填好后先点「保存并测试」，能连通再长期使用。不配置云端也完全不影响本地使用。</div>
   </div>
 
+  <div class="card" id="cloudManual">
+    <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>云端同步 · 详细操作手册</h3>
+
+    <div style="font-size:13px;line-height:1.8;background:var(--orange-soft);border-radius:12px;padding:10px 12px;margin-bottom:12px">
+      <b>先澄清一个误解：</b>「跑服务」<b>不需要下载 WorkBuddy</b>，也不需要注册任何账号。
+      它只是在你电脑上开一个小小的程序，让手机和电脑能互相找到对方。
+      如果你连这个都不想装，直接看下面 <b>方案 B</b>，全程在网页上点几下就行。
+    </div>
+
+    <h4>两种方案怎么选</h4>
+    <div class="tbl-scroll">
+      <table class="cards">
+        <thead><tr><th>对比项</th><th>方案 A：本机服务</th><th>方案 B：Cloudflare</th></tr></thead>
+        <tbody>
+          <tr><td data-l="对比项">要装东西吗</td><td data-l="方案A">要装 Node.js（免费，5 分钟）</td><td data-l="方案B">不用装，网页操作</td></tr>
+          <tr><td data-l="对比项">适合场景</td><td data-l="方案A">手机和电脑同一 Wi-Fi</td><td data-l="方案B">手机在外面用 4G 也能同步</td></tr>
+          <tr><td data-l="对比项">电脑关机后</td><td data-l="方案A">同步不了</td><td data-l="方案B">照常同步</td></tr>
+          <tr><td data-l="对比项">费用</td><td data-l="方案A">免费</td><td data-l="方案B">免费（个人额度足够）</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>方案 A：本机服务（推荐先试这个）</h4>
+    <ol class="li">
+      <li>打开 <b>nodejs.org</b>，下载 <b>LTS</b> 版本，双击安装，一路「下一步」（Windows 用户默认即可）</li>
+      <li>打开项目文件夹，进入 <b>云同步服务</b> 目录，双击 <b>启动云同步服务.bat</b></li>
+      <li>会弹出一个黑色窗口，里面显示三行关键信息：<br>
+        · <b>本机地址</b>：http://127.0.0.1:8787<br>
+        · <b>局域网</b>：http://192.168.x.x:8787（手机用这个）<br>
+        · <b>访问令牌</b>：change-me-2027<br>
+        <b>这个黑窗口不要关</b>，关了服务就停了</li>
+      <li>打开看板 → 更多操作 → 云端同步 → 地址填「本机地址」→ 令牌复制粘贴 → 点「保存并测试」</li>
+      <li>手机上：确认和电脑连<b>同一个 Wi-Fi</b>，地址改用黑窗口里那行<b>局域网</b>地址，令牌填同一个</li>
+    </ol>
+
+    <h4>方案 B：Cloudflare（不装任何软件）</h4>
+    <ol class="li">
+      <li>浏览器打开 <b>dash.cloudflare.com</b>，注册一个免费账号</li>
+      <li>左侧 <b>Workers &amp; Pages</b> → <b>Create</b> → <b>Worker</b> → 起个名字 → <b>Deploy</b></li>
+      <li>点 <b>Edit code</b>，把项目里 <b>云同步服务/cloudflare-worker.js</b> 的全部内容复制粘贴进去（覆盖原有代码）→ <b>Deploy</b></li>
+      <li>回到该 Worker → <b>Settings</b> → <b>Variables and Secrets</b>，加两个：<br>
+        · 类型选 <b>KV Namespace</b>，变量名填 <b>BOARD</b>，新建一个命名空间绑定<br>
+        · 类型选 <b>Secret/Text</b>，变量名填 <b>TOKEN</b>，值填你自定的口令（例如 my-2027）</li>
+      <li>复制 Worker 的访问地址（形如 <b>https://xxx.workers.dev</b>），填进看板，令牌填你刚设的 TOKEN</li>
+    </ol>
+
+    <h4>常见问题</h4>
+    <ul class="li amber">
+      <li><b>要下载 WorkBuddy 吗？</b>不用。方案 A 只要 Node.js，方案 B 什么软件都不用装。</li>
+      <li><b>要花钱吗？</b>两条路都免费。本机服务零成本，Cloudflare 个人用量在免费额度内。</li>
+      <li><b>手机填了 127.0.0.1 连不上？</b>127.0.0.1 指的是手机自己。手机要填电脑的<b>局域网地址</b>。</li>
+      <li><b>手机和电脑不在一个 Wi-Fi？</b>方案 A 用不了，走方案 B。</li>
+      <li><b>点了保存并测试提示失败？</b>先确认黑窗口还开着；地址要带 http://；检查 Windows 防火墙是否拦了 8787 端口。</li>
+      <li><b>忘了同步口令？</b>密文无法恢复，只能换口令重新上传（会覆盖云端旧数据）。</li>
+      <li><b>不想配这些？</b>完全可以。用「更多操作 → 导出备份」发给自己微信，另一台「导入恢复」，也能手动同步。</li>
+    </ul>
+  </div>
+
     <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 015.8 1c0 2-3 2.2-3 4"/><path d="M12 17h.01"/></svg>怎么开始</h3>
     <ul class="li amber">
       <li><b>1</b>：点「更多操作 → 载入示例数据」，10 秒看懂结构</li>
@@ -2240,6 +2298,9 @@ function cloudForm(){
     <button class="btn" id="c_pull">📥 拉取云端数据</button>
     <button class="btn" id="c_push">📤 上传到云端</button>
   </div>
+  <div class="btnrow" style="margin-bottom:10px">
+    <button class="btn" id="c_help">📖 不会配？看详细教程</button>
+  </div>
   ${_cloudBehind?'<div class="btnrow" style="margin-bottom:10px"><button class="btn primary" id="c_diff">🔍 查看差异并合并</button></div>':''}
 
   <div style="font-size:12px;font-weight:600;color:var(--ink2);margin:2px 0 6px">最近同步记录</div>
@@ -2279,6 +2340,17 @@ document.addEventListener("click",async e=>{
   if(e.target.id==="c_pull"){
     toast("正在从云端拉取…");const ok=await loadCloud(true);closeSheet();renderAll();refreshCloudBadge();
     toast(ok?"已从云端拉取最新数据 ✓":"拉取失败，请检查网络");
+  }
+  if(e.target.id==="c_help"){
+    closeSheet(true);
+    setTimeout(function(){
+      try{
+        showPane("about");
+        const el=document.getElementById("cloudManual");
+        if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+      }catch(err){}
+    },220);
+    return;
   }
   if(e.target.id==="c_diff"){
     if(!_cloudData){toast("还没有云端数据，先点「拉取云端数据」");return;}
