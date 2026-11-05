@@ -2517,8 +2517,9 @@ function aiWizSave(){
   aiRefreshTools();
   closeSheet(true);   // 已保存，跳过「未保存」二次确认
   $("#aiCfg").textContent=aiReady()?(LLM_CFG.name+" · "+LLM_CFG.model):"未配置";
-  toast("AI 已启用："+LLM_CFG.model);
-  aiBotMsg("已连接「"+LLM_CFG.name+"」，当前模型 "+LLM_CFG.model+(pickedModels.length>1?("，另有 "+(pickedModels.length-1)+" 个已保存模型可随时切换"):"")+"。",false);
+  toast("已启用 "+LLM_CFG.model+"，共保存 "+pickedModels.length+" 个模型");
+  aiBotMsg("已连接「"+LLM_CFG.name+"」，当前模型 "+LLM_CFG.model+"。已保存 "+pickedModels.length+" 个模型到「切换模型」列表"
+    +(pickedModels.length>1?"，可在输入区随时切换。":"；想多存几个，重新进「设置」在第 3 步多选即可。"),false);
 }
 
 const AI_SYSTEM=`你是「一页秋招」求职管理工具的智能助手，要像一个熟悉秋招的学长/学姐一样主动、贴心、聪明。
@@ -2851,7 +2852,9 @@ const AI_LIST_KEY="wb_qiuzhao_llm_list";
 function aiLoadList(){
   let a=[];
   try{const raw=localStorage.getItem(AI_LIST_KEY);a=raw?JSON.parse(raw):[]}catch(e){a=[]}
-  if(!Array.isArray(a))a=[];
+  if(!Array.isArray(a)||!a.length){
+    if(Array.isArray(_aiListCache)&&_aiListCache.length)a=_aiListCache.slice();
+  }
   // 兜底：列表为空但已有配置（老版本配置/换域名）时自动补录，避免出现"选了模型却显示没有模型"
   if(!a.length&&LLM_CFG&&LLM_CFG.model&&LLM_CFG.base){
     a=[{id:LLM_CFG.id,name:LLM_CFG.name,base:LLM_CFG.base,key:LLM_CFG.key,model:LLM_CFG.model,web:!!LLM_CFG.web}];
@@ -2859,7 +2862,12 @@ function aiLoadList(){
   }
   return a;
 }
-function aiSaveList(a){try{localStorage.setItem(AI_LIST_KEY,JSON.stringify(a.slice(0,20)))}catch(e){}}
+let _aiListCache=null;   // 内存兜底：隐私模式/存储被禁时仍可切换
+function aiSaveList(a){
+  const trimmed=a.slice(0,20);
+  _aiListCache=trimmed;
+  try{localStorage.setItem(AI_LIST_KEY,JSON.stringify(trimmed))}catch(e){}
+}
 function aiCfgKey(c){return [c&&c.id,c&&c.base,c&&c.model].join("|")}
 function aiRememberCfg(cfg){
   if(!cfg||!cfg.model)return;
@@ -2889,7 +2897,8 @@ function aiModelSheet(){
     return `<div class="wiz-model ${on?"on":""}" data-pick="${i}"><span class="dot"></span><span style="min-width:0"><span style="display:block">${esc(c.model)}</span><span style="display:block;font-size:11px;color:var(--ink3);font-weight:400">${esc(c.name||"")} · ${esc(host)}</span></span></div>`;
   }).join("");
   openSheet(`<h3>切换模型<button class="x" onclick="closeSheet()">✕</button></h3>
-    ${rows?`<div class="wiz-models">${rows}</div>`:`<div class="empty"><b>还没有保存过模型</b>先用「设置」走一遍配置，之后这里可一键切换</div>`}
+    <div class="small" style="margin:-4px 0 8px">已保存 ${list.length} 个模型${list.length===1?"（想多存几个？进「设置」第 3 步多选）":""}</div>
+    ${rows?`<div class="wiz-models">${rows}</div>`:`<div class="empty"><b>还没有可切换的模型</b>先用「设置」走一遍配置，之后这里可一键切换</div>`}
     <div class="btnrow"><button class="btn primary" id="m_new">＋ 配置新模型</button></div>`);
   document.querySelectorAll("#sheet [data-pick]").forEach(row=>{
     row.addEventListener("click",()=>{
